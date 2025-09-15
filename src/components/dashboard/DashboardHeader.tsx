@@ -2,11 +2,11 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks';
+import { useAuthContext } from '@/hooks/AuthContext';
 import { MessageSquare, LogOut, User } from 'lucide-react';
 
 export default function DashboardHeader() {
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuthContext();
 
   const handleLogout = async () => {
     await logout();

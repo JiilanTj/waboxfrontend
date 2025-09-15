@@ -5,11 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/hooks';
+import { useAuthContext } from '@/hooks/AuthContext';
 import { MessageSquare, Loader2, AlertCircle } from 'lucide-react';
 
 export default function LoginForm() {
-  const { login, isLoading } = useAuth();
+  const { login, isLoading } = useAuthContext();
   const [credentials, setCredentials] = useState({
     username: '',
     password: '',

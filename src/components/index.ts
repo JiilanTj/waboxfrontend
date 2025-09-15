@@ -1,5 +1,6 @@
 // Auth Components
 export { default as LoginForm } from './auth/LoginForm';
+export { default as AuthGuard } from './AuthGuard';
 
 // Dashboard Components  
 export { default as DashboardHeader } from './dashboard/DashboardHeader';

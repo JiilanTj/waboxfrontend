@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { useAuth } from '@/hooks';
+import { useAuthContext } from '@/hooks/AuthContext';
 import LoginForm from '@/components/auth/LoginForm';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 export default function AppMain() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuthContext();
 
   if (isLoading) {
     return (
