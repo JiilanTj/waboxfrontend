@@ -1,10 +1,10 @@
 import AuthGuard from '@/components/AuthGuard';
-import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import DashboardPageContent from '@/components/dashboard/DashboardPageContent';
 
 export default function DashboardPage() {
   return (
     <AuthGuard requireAuth={true} redirectTo="/login">
-      <DashboardLayout />
+      <DashboardPageContent />
     </AuthGuard>
   );
 }
