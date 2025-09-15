@@ -14,6 +14,8 @@ import {
   X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 interface SidebarItem {
   title: string;
@@ -59,6 +61,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   const { user, logout } = useAuthContext();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const pathname = usePathname();
 
   const handleLogout = async () => {
     await logout();
@@ -71,9 +74,6 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   const handleItemClick = (item: SidebarItem) => {
     if (item.isLogout) {
       handleLogout();
-    } else {
-      // Navigate to the route (you can implement routing here)
-      console.log('Navigate to:', item.href);
     }
   };
 
@@ -179,35 +179,48 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
         <nav className="flex-1 p-4">
           <ul className="space-y-1">
             {sidebarItems.map((item, index) => {
-              const isActive = index === 0; // Dashboard is active by default
+              const isActive = pathname === item.href;
               return (
                 <li key={index}>
-                  <button
-                    onClick={() => handleItemClick(item)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-all duration-200 group",
-                      "hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2",
-                      "active:scale-[0.98]",
-                      item.isLogout 
-                        ? "text-red-600 hover:bg-red-50 hover:text-red-700" 
-                        : "text-gray-700 hover:text-gray-900",
-                      isActive && !item.isLogout && "bg-green-50 text-green-700 border border-green-200 shadow-sm"
-                    )}
-                  >
-                    <item.icon className={cn(
-                      "h-5 w-5 flex-shrink-0 transition-colors",
-                      item.isLogout ? "text-red-600" : "text-current"
-                    )} />
-                    {!isCollapsed && (
-                      <>
-                        <span className="font-medium truncate flex-1">{item.title}</span>
-                        {/* Active indicator */}
-                        {isActive && !item.isLogout && (
-                          <div className="h-2 w-2 bg-green-600 rounded-full"></div>
-                        )}
-                      </>
-                    )}
-                  </button>
+                  {item.isLogout ? (
+                    <button
+                      onClick={() => handleItemClick(item)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-all duration-200 group",
+                        "hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2",
+                        "active:scale-[0.98]",
+                        "text-red-600 hover:bg-red-50 hover:text-red-700"
+                      )}
+                    >
+                      <item.icon className="h-5 w-5 flex-shrink-0 text-red-600" />
+                      {!isCollapsed && <span className="font-medium truncate flex-1">{item.title}</span>}
+                    </button>
+                  ) : (
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group",
+                        "hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2",
+                        "active:scale-[0.98]",
+                        "text-gray-700 hover:text-gray-900",
+                        isActive && "bg-green-50 text-green-700 border border-green-200 shadow-sm"
+                      )}
+                      onClick={onToggle}
+                    >
+                      <item.icon className={cn(
+                        "h-5 w-5 flex-shrink-0 transition-colors",
+                        isActive ? "text-green-700" : "text-current"
+                      )} />
+                      {!isCollapsed && (
+                        <>
+                          <span className="font-medium truncate flex-1">{item.title}</span>
+                          {isActive && (
+                            <div className="h-2 w-2 bg-green-600 rounded-full"></div>
+                          )}
+                        </>
+                      )}
+                    </Link>
+                  )}
                 </li>
               );
             })}
