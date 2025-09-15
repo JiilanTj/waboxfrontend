@@ -7,3 +7,15 @@ export type {
   UpdateUserRequest,
   DeleteUserResponse
 } from './users';
+export type {
+  WhatsAppNumber,
+  WhatsAppPagination,
+  WhatsAppListResponse,
+  CreateWhatsAppRequest,
+  UpdateWhatsAppRequest,
+  WhatsAppResponse,
+  CreateWhatsAppResponse,
+  WhatsAppDeleteResponse,
+  WhatsAppToggleStatusResponse,
+  WhatsAppFilters
+} from './whatsapp';

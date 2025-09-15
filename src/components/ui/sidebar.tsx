@@ -38,7 +38,7 @@ const sidebarItems: SidebarItem[] = [
   {
     title: 'Akun WhatsApp',
     icon: MessageSquare,
-    href: '/whatsapp-accounts',
+    href: '/whatsapp',
   },
   {
     title: 'Settings',

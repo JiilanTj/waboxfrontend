@@ -3,7 +3,7 @@
 import React from 'react';
 import { useAuthContext } from '@/hooks/AuthContext';
 import LoginForm from '@/components/auth/LoginForm';
-import DashboardContent from '@/components/dashboard/DashboardLayout';
+import DashboardPageContent from '@/components/dashboard/DashboardPageContent';
 
 export default function AppMain() {
   const { isAuthenticated, isLoading } = useAuthContext();
@@ -21,7 +21,7 @@ export default function AppMain() {
 
   return (
     <div>
-      {isAuthenticated ? <DashboardContent /> : <LoginForm />}
+      {isAuthenticated ? <DashboardPageContent /> : <LoginForm />}
     </div>
   );
 }
