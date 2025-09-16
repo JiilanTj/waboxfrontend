@@ -3,13 +3,27 @@
 import { useState } from 'react';
 import { ContactList } from '@/components/chat/ContactList';
 import { ChatArea } from '@/components/chat/ChatArea';
+import { usePureSocketChatList } from '@/hooks/usePureSocketChatList';
+import { Chat } from '@/lib/types/chat';
 
 interface ChatLayoutProps {
   whatsappId: string;
 }
 
 export function ChatLayout({ whatsappId }: ChatLayoutProps) {
-  const [selectedContact, setSelectedContact] = useState<string | null>('1');
+  const [selectedContact, setSelectedContact] = useState<string | null>(null);
+  
+  // Get chat list to find selected chat data
+  const { chats } = usePureSocketChatList({
+    whatsappNumberId: parseInt(whatsappId),
+    limit: 50,
+    offset: 0
+  });
+
+  // Find selected chat data
+  const selectedChat: Chat | null = selectedContact 
+    ? chats.find(chat => chat.id === selectedContact) || null 
+    : null;
 
   return (
     <div className="h-screen bg-gray-100 flex">
@@ -28,8 +42,11 @@ export function ChatLayout({ whatsappId }: ChatLayoutProps) {
       <div className={`flex flex-col transition-all duration-300 ${
         selectedContact ? 'w-full lg:flex-1' : 'hidden lg:flex lg:flex-1'
       }`}>
-        {selectedContact ? (
-          <ChatArea contactId={selectedContact} />
+        {selectedContact && selectedChat ? (
+          <ChatArea 
+            chat={selectedChat} 
+            onBack={() => setSelectedContact(null)} // For mobile back button
+          />
         ) : (
           <div className="flex-1 bg-gray-50 flex items-center justify-center">
             <div className="text-center space-y-4">

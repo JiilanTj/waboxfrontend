@@ -3,24 +3,26 @@
 import { ChatHeader } from '@/components/chat/ChatHeader';
 import { MessageList } from '@/components/chat/MessageList';
 import { MessageInput } from '@/components/chat/MessageInput';
+import { Chat } from '@/lib/types/chat';
 
 interface ChatAreaProps {
-  contactId: string;
+  chat: Chat;
+  onBack?: () => void; // For mobile back button
 }
 
-export function ChatArea({ contactId }: ChatAreaProps) {
+export function ChatArea({ chat, onBack }: ChatAreaProps) {
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Chat Header */}
-      <ChatHeader contactId={contactId} />
+      <ChatHeader chat={chat} onBack={onBack} />
       
       {/* Messages */}
       <div className="flex-1 overflow-hidden">
-        <MessageList contactId={contactId} />
+        <MessageList contactId={chat.id} />
       </div>
       
       {/* Message Input */}
-      <MessageInput contactId={contactId} />
+      <MessageInput contactId={chat.id} />
     </div>
   );
 }

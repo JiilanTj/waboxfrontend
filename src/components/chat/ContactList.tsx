@@ -2,7 +2,7 @@
 
 import { Search, MoreVertical, MessageCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { usePureSocketChatList } from '@/hooks/usePureSocketChatList';
+import { useRestChatList } from '@/hooks/useRestChatList';
 
 interface ContactListProps {
   selectedContact: string | null;
@@ -42,19 +42,28 @@ const generateAvatar = (name: string) => {
 };
 
 export function ContactList({ selectedContact, onSelectContact, whatsappId }: ContactListProps) {
-  // Use pure Socket.IO real-time chat list hook
+  // Use REST API with 5-second polling for chat list
   const {
     chats,
     isLoading,
     error,
     pagination,
-    requestRefresh,
+    refetch,
     loadMore,
-    connectionStatus
-  } = usePureSocketChatList({
+    isPolling
+  } = useRestChatList({
     whatsappNumberId: parseInt(whatsappId),
     limit: 50,
     offset: 0
+  });
+
+  // Debug: Log component state changes
+  console.log('🎯 ContactList render:', {
+    chatsLength: chats.length,
+    isLoading,
+    error,
+    isPolling,
+    whatsappId
   });
   return (
     <div className="flex flex-col h-full">
@@ -71,16 +80,12 @@ export function ContactList({ selectedContact, onSelectContact, whatsappId }: Co
               <div className="flex items-center gap-2">
                 <h1 className="font-semibold text-gray-900">WhatsApp Business</h1>
                 <div className={`w-2 h-2 rounded-full ${
-                  connectionStatus === 'connected' ? 'bg-green-500' : 
-                  connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
-                  connectionStatus === 'error' ? 'bg-red-500' : 'bg-gray-400'
-                }`} title={connectionStatus} />
+                  isPolling ? 'bg-green-500' : 'bg-gray-400'
+                }`} title={isPolling ? 'Polling active' : 'Polling inactive'} />
               </div>
               <p className="text-xs text-gray-500">
                 ID: {whatsappId} • {
-                  connectionStatus === 'connected' ? '🟢 Real-time' :
-                  connectionStatus === 'connecting' ? '🟡 Connecting...' :
-                  connectionStatus === 'error' ? '🔴 Error' : '⚫ Offline'
+                  isPolling ? '🟢 Auto-refresh (5s)' : '⚫ Manual only'
                 }
               </p>
             </div>
@@ -89,8 +94,9 @@ export function ContactList({ selectedContact, onSelectContact, whatsappId }: Co
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={requestRefresh}
+              onClick={refetch}
               disabled={isLoading}
+              title="Manual refresh"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
@@ -114,23 +120,10 @@ export function ContactList({ selectedContact, onSelectContact, whatsappId }: Co
         </div>
       </div>
 
-      {/* Connection Status Banner */}
-      {connectionStatus !== 'connected' && (
-        <div className={`p-2 text-center text-sm ${
-          connectionStatus === 'connecting' ? 'bg-yellow-50 text-yellow-700 border-b border-yellow-200' :
-          connectionStatus === 'error' ? 'bg-red-50 text-red-700 border-b border-red-200' :
-          'bg-gray-50 text-gray-700 border-b border-gray-200'
-        }`}>
-          {connectionStatus === 'connecting' && '🔄 Connecting to real-time server...'}
-          {connectionStatus === 'error' && '❌ Real-time connection failed'}
-          {connectionStatus === 'disconnected' && '⚠️ Offline mode'}
-        </div>
-      )}
-
-      {/* Pure Socket.IO Mode Indicator */}
-      {connectionStatus === 'connected' && (
+      {/* Polling Status */}
+      {isPolling && (
         <div className="p-2 text-center text-xs bg-green-50 text-green-700 border-b border-green-200">
-          ⚡ Pure Socket.IO Mode - Real-time updates active
+          🔄 Auto-refreshing every 5 seconds
         </div>
       )}
 
@@ -153,7 +146,7 @@ export function ContactList({ selectedContact, onSelectContact, whatsappId }: Co
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={requestRefresh}
+              onClick={refetch}
               className="text-red-600 border-red-200 hover:bg-red-50"
             >
               Try Again
@@ -173,14 +166,16 @@ export function ContactList({ selectedContact, onSelectContact, whatsappId }: Co
         )}
 
         {/* Chat List */}
-        {chats.map((chat) => (
-          <div
-            key={chat.id}
-            onClick={() => onSelectContact(chat.id)}
-            className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 ${
-              selectedContact === chat.id ? 'bg-green-50 border-l-4 border-l-green-500' : ''
-            }`}
-          >
+        {chats.map((chat) => {
+          console.log('🎯 Rendering chat:', chat);
+          return (
+            <div
+              key={chat.id}
+              onClick={() => onSelectContact(chat.id)}
+              className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 ${
+                selectedContact === chat.id ? 'bg-green-50 border-l-4 border-l-green-500' : ''
+              }`}
+            >
             {/* Avatar */}
             <div className="relative">
               <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
@@ -225,7 +220,8 @@ export function ContactList({ selectedContact, onSelectContact, whatsappId }: Co
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {/* Load More Button */}
         {pagination && pagination.offset + pagination.limit < pagination.total && (
