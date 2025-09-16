@@ -19,3 +19,9 @@ export type {
   WhatsAppToggleStatusResponse,
   WhatsAppFilters
 } from './whatsapp';
+export type {
+  WhatsAppSession,
+  CreateSessionResponse,
+  GetSessionResponse,
+  GetQRCodeResponse
+} from './whatsapp-session';

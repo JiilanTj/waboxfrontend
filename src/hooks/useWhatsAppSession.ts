@@ -1,0 +1,215 @@
+'use client';
+
+import { useCallback, useState } from 'react';
+import { whatsappSessionApi } from '@/lib/api';
+import {
+  WhatsAppSession,
+} from '@/lib/types';
+
+interface WhatsAppSessionState {
+  sessions: Record<number, WhatsAppSession>; // keyed by whatsappNumberId
+  qrCodes: Record<string, string>; // keyed by sessionId
+  isLoading: Record<number, boolean>; // keyed by whatsappNumberId
+  isCreating: Record<number, boolean>; // keyed by whatsappNumberId
+  isFetchingQR: Record<string, boolean>; // keyed by sessionId
+  errors: Record<number, string>; // keyed by whatsappNumberId
+}
+
+export function useWhatsAppSession() {
+  const [state, setState] = useState<WhatsAppSessionState>({
+    sessions: {},
+    qrCodes: {},
+    isLoading: {},
+    isCreating: {},
+    isFetchingQR: {},
+    errors: {},
+  });
+
+  // Get session for a WhatsApp number
+  const getSession = useCallback(async (whatsappNumberId: number) => {
+    setState(prev => ({
+      ...prev,
+      isLoading: { ...prev.isLoading, [whatsappNumberId]: true },
+      errors: { ...prev.errors, [whatsappNumberId]: '' }
+    }));
+
+    try {
+      const response = await whatsappSessionApi.getSession(whatsappNumberId);
+      if (response.success && response.data) {
+        setState(prev => ({
+          ...prev,
+          sessions: { 
+            ...prev.sessions, 
+            [whatsappNumberId]: response.data!.data 
+          },
+          isLoading: { ...prev.isLoading, [whatsappNumberId]: false }
+        }));
+      } else {
+        setState(prev => ({
+          ...prev,
+          errors: { 
+            ...prev.errors, 
+            [whatsappNumberId]: response.error?.message || 'Failed to get session' 
+          },
+          isLoading: { ...prev.isLoading, [whatsappNumberId]: false }
+        }));
+      }
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setState(prev => ({
+        ...prev,
+        errors: { ...prev.errors, [whatsappNumberId]: errorMessage },
+        isLoading: { ...prev.isLoading, [whatsappNumberId]: false }
+      }));
+      return {
+        success: false,
+        error: {
+          error: 'NetworkError',
+          message: errorMessage
+        }
+      };
+    }
+  }, []);
+
+  // Create or update session for a WhatsApp number
+  const createSession = useCallback(async (whatsappNumberId: number) => {
+    setState(prev => ({
+      ...prev,
+      isCreating: { ...prev.isCreating, [whatsappNumberId]: true },
+      errors: { ...prev.errors, [whatsappNumberId]: '' }
+    }));
+
+    try {
+      const response = await whatsappSessionApi.createSession(whatsappNumberId);
+      if (response.success && response.data) {
+        setState(prev => ({
+          ...prev,
+          sessions: { 
+            ...prev.sessions, 
+            [whatsappNumberId]: response.data!.data 
+          },
+          isCreating: { ...prev.isCreating, [whatsappNumberId]: false }
+        }));
+      } else {
+        setState(prev => ({
+          ...prev,
+          errors: { 
+            ...prev.errors, 
+            [whatsappNumberId]: response.error?.message || 'Failed to create session' 
+          },
+          isCreating: { ...prev.isCreating, [whatsappNumberId]: false }
+        }));
+      }
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setState(prev => ({
+        ...prev,
+        errors: { ...prev.errors, [whatsappNumberId]: errorMessage },
+        isCreating: { ...prev.isCreating, [whatsappNumberId]: false }
+      }));
+      return {
+        success: false,
+        error: {
+          error: 'NetworkError',
+          message: errorMessage
+        }
+      };
+    }
+  }, []);
+
+  // Get QR code for a session
+  const getQRCode = useCallback(async (sessionId: string) => {
+    setState(prev => ({
+      ...prev,
+      isFetchingQR: { ...prev.isFetchingQR, [sessionId]: true }
+    }));
+
+    try {
+      const response = await whatsappSessionApi.getQRCode(sessionId);
+      if (response.success && response.data) {
+        setState(prev => ({
+          ...prev,
+          qrCodes: { 
+            ...prev.qrCodes, 
+            [sessionId]: response.data!.data.qrCode 
+          },
+          isFetchingQR: { ...prev.isFetchingQR, [sessionId]: false }
+        }));
+      } else {
+        setState(prev => ({
+          ...prev,
+          isFetchingQR: { ...prev.isFetchingQR, [sessionId]: false }
+        }));
+      }
+      return response;
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        isFetchingQR: { ...prev.isFetchingQR, [sessionId]: false }
+      }));
+      return {
+        success: false,
+        error: {
+          error: 'NetworkError',
+          message: error instanceof Error ? error.message : 'Unknown error occurred'
+        }
+      };
+    }
+  }, []);
+
+  // Clear session data for a WhatsApp number
+  const clearSession = useCallback((whatsappNumberId: number) => {
+    setState(prev => {
+      const newState = { ...prev };
+      delete newState.sessions[whatsappNumberId];
+      delete newState.errors[whatsappNumberId];
+      delete newState.isLoading[whatsappNumberId];
+      delete newState.isCreating[whatsappNumberId];
+      
+      // Also clear QR codes for this session
+      const session = prev.sessions[whatsappNumberId];
+      if (session?.id) {
+        delete newState.qrCodes[session.id];
+        delete newState.isFetchingQR[session.id];
+      }
+      
+      return newState;
+    });
+  }, []);
+
+  // Clear QR code for a session
+  const clearQRCode = useCallback((sessionId: string) => {
+    setState(prev => {
+      const newState = { ...prev };
+      delete newState.qrCodes[sessionId];
+      delete newState.isFetchingQR[sessionId];
+      return newState;
+    });
+  }, []);
+
+  return {
+    // Data
+    sessions: state.sessions,
+    qrCodes: state.qrCodes,
+    errors: state.errors,
+    
+    // Actions
+    getSession,
+    createSession,
+    getQRCode,
+    clearSession,
+    clearQRCode,
+    
+    // Loading states
+    isLoading: (whatsappNumberId: number) => state.isLoading[whatsappNumberId] || false,
+    isCreating: (whatsappNumberId: number) => state.isCreating[whatsappNumberId] || false,
+    isFetchingQR: (sessionId: string) => state.isFetchingQR[sessionId] || false,
+    
+    // Helper functions
+    getSessionByWhatsAppId: (whatsappNumberId: number) => state.sessions[whatsappNumberId],
+    getQRCodeBySessionId: (sessionId: string) => state.qrCodes[sessionId],
+    getErrorByWhatsAppId: (whatsappNumberId: number) => state.errors[whatsappNumberId] || null,
+  };
+}
