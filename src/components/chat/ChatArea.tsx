@@ -7,10 +7,11 @@ import { Chat } from '@/lib/types/chat';
 
 interface ChatAreaProps {
   chat: Chat;
+  sessionId?: string; // 🆕 Add sessionId prop  
   onBack?: () => void; // For mobile back button
 }
 
-export function ChatArea({ chat, onBack }: ChatAreaProps) {
+export function ChatArea({ chat, sessionId, onBack }: ChatAreaProps) {
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Chat Header */}
@@ -18,11 +19,15 @@ export function ChatArea({ chat, onBack }: ChatAreaProps) {
       
       {/* Messages */}
       <div className="flex-1 overflow-hidden">
-        <MessageList contactId={chat.id} />
+        <MessageList contactId={chat.id} sessionId={sessionId} />
       </div>
       
       {/* Message Input */}
-      <MessageInput contactId={chat.id} />
+      <MessageInput 
+        contactId={chat.id} 
+        sessionId={sessionId}
+        contactNumber={chat.contactNumber} // 🆕 Pass contact number
+      />
     </div>
   );
 }

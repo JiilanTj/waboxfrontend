@@ -40,3 +40,32 @@ export interface SocketChatHistoryData {
     total: number;
   };
 }
+
+// Send Message Types
+export interface SendMessageRequest {
+  to: string;
+  message: string;
+}
+
+export interface SendMessageResponse {
+  success: boolean;
+  message: string;
+  data: {
+    sessionId: string;
+    from: {
+      id: number;
+      name: string;
+      phoneNumber: string;
+    };
+    to: string;
+    message: string;
+    messageId: string;
+    timestamp: string;
+  };
+}
+
+export interface SendMessageParams {
+  sessionId: string;
+  to: string;
+  message: string;
+}

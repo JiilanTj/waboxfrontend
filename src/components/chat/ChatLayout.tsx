@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ContactList } from '@/components/chat/ContactList';
 import { ChatArea } from '@/components/chat/ChatArea';
-import { usePureSocketChatList } from '@/hooks/usePureSocketChatList';
+import { useChat } from '@/hooks/useChat';
+import { useWhatsAppSession } from '@/hooks/useWhatsAppSession';
 import { Chat } from '@/lib/types/chat';
 
 interface ChatLayoutProps {
@@ -13,11 +14,16 @@ interface ChatLayoutProps {
 export function ChatLayout({ whatsappId }: ChatLayoutProps) {
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
   
-  // Get chat list to find selected chat data
-  const { chats } = usePureSocketChatList({
+  // Get WhatsApp sessions to find the correct sessionId
+  const { allSessions, getAllSessions } = useWhatsAppSession();
+  
+  // Get chat list to find selected chat data - using our useChat hook
+  const { data: chats } = useChat({
     whatsappNumberId: parseInt(whatsappId),
     limit: 50,
-    offset: 0
+    offset: 0,
+    autoFetch: true,
+    enablePolling: false // Let ContactList handle the polling
   });
 
   // Find selected chat data
@@ -25,12 +31,46 @@ export function ChatLayout({ whatsappId }: ChatLayoutProps) {
     ? chats.find(chat => chat.id === selectedContact) || null 
     : null;
 
+  // 🆕 Find the correct sessionId from WhatsApp sessions
+  const whatsappSession = allSessions.find(session => 
+    session.whatsappNumberId === parseInt(whatsappId) && 
+    session.status === 'CONNECTED'
+  );
+  
+  const sessionId = whatsappSession?.id || undefined;
+  
+  console.log('🔍 ChatLayout session lookup:', {
+    whatsappId: parseInt(whatsappId),
+    foundSession: whatsappSession,
+    sessionId: sessionId,
+    allSessions: allSessions
+  });
+
+  // Load sessions if not loaded yet
+  useEffect(() => {
+    if (allSessions.length === 0) {
+      getAllSessions();
+    }
+  }, [allSessions.length, getAllSessions]);
+
   return (
     <div className="h-screen bg-gray-100 flex">
+      {/* Show warning if no connected session */}
+      {!sessionId && (
+        <div className="absolute top-0 left-0 right-0 bg-yellow-100 border-b border-yellow-200 px-4 py-3 z-10">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 text-yellow-600">⚠️</div>
+            <span className="text-yellow-800 text-sm font-medium">
+              WhatsApp belum terhubung. Silakan hubungkan WhatsApp terlebih dahulu untuk dapat mengirim pesan.
+            </span>
+          </div>
+        </div>
+      )}
+      
       {/* Sidebar - Contact List - Hidden on mobile when chat is selected */}
       <div className={`bg-white border-r border-gray-300 flex flex-col transition-all duration-300 ${
         selectedContact ? 'hidden lg:flex lg:w-1/3' : 'w-full lg:w-1/3'
-      }`}>
+      } ${!sessionId ? 'pt-16' : ''}`}>
         <ContactList 
           selectedContact={selectedContact}
           onSelectContact={setSelectedContact}
@@ -41,10 +81,11 @@ export function ChatLayout({ whatsappId }: ChatLayoutProps) {
       {/* Chat Area */}
       <div className={`flex flex-col transition-all duration-300 ${
         selectedContact ? 'w-full lg:flex-1' : 'hidden lg:flex lg:flex-1'
-      }`}>
+      } ${!sessionId ? 'pt-16' : ''}`}>
         {selectedContact && selectedChat ? (
           <ChatArea 
             chat={selectedChat} 
+            sessionId={sessionId} // 🆕 Pass sessionId (will be undefined if no connection)
             onBack={() => setSelectedContact(null)} // For mobile back button
           />
         ) : (
@@ -66,6 +107,11 @@ export function ChatLayout({ whatsappId }: ChatLayoutProps) {
                 <p className="text-gray-500 text-sm">
                   Pilih kontak untuk memulai percakapan
                 </p>
+                {!sessionId && (
+                  <p className="text-yellow-600 text-sm mt-2">
+                    ⚠️ WhatsApp belum terhubung
+                  </p>
+                )}
               </div>
             </div>
           </div>

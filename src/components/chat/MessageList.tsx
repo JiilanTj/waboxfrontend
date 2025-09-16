@@ -2,11 +2,12 @@
 
 import { Check, CheckCheck, AlertCircle } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { useRestChatHistory } from '@/hooks/useRestChatHistory';
+import { useMessage } from '@/hooks/useMessage';
 import { ChatMessage } from '@/lib/types/message';
 
 interface MessageListProps {
   contactId: string;
+  sessionId?: string; // 🆕 Add sessionId prop
 }
 
 const MessageStatus = ({ status }: { status: ChatMessage['status'] }) => {
@@ -58,21 +59,39 @@ const formatTimestamp = (timestamp: string): string => {
   }
 };
 
-export function MessageList({ contactId }: MessageListProps) {
+export function MessageList({ contactId, sessionId }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Use REST API with 5-second polling for chat history
+  // Use our new useMessage hook with 5-second polling and sessionId
   const { 
     messages, 
     isLoading, 
     error, 
-    refetch, 
+    refresh, 
     loadMore, 
     pagination,
-    isPolling 
-  } = useRestChatHistory({
+    sendMessage, // 🆕 Get sendMessage function
+    isSending,   // 🆕 Get sending state
+    sendError    // 🆕 Get send error
+  } = useMessage({
     chatId: contactId,
-    limit: 50
+    sessionId: sessionId, // 🆕 Pass sessionId
+    limit: 50,
+    offset: 0,
+    autoFetch: true,
+    enablePolling: true, // Enable 5-second polling
+    pollingInterval: 5000
+  });
+
+  // Debug log to track contactId changes
+  console.log('🎯 MessageList render:', {
+    contactId,
+    sessionId, // 🆕 Log sessionId
+    messagesLength: messages.length,
+    isLoading,
+    error,
+    isSending,
+    sendError
   });
 
   const scrollToBottom = () => {
@@ -83,6 +102,18 @@ export function MessageList({ contactId }: MessageListProps) {
     scrollToBottom();
   }, [messages]);
 
+  // Scroll to bottom when contactId changes (switching chats)
+  useEffect(() => {
+    if (contactId) {
+      // Small delay to ensure messages are loaded
+      const timer = setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [contactId]);
+
   // Connection status indicator
   const ConnectionStatus = () => {
     return null; // No connection status needed for REST API with polling
@@ -91,13 +122,6 @@ export function MessageList({ contactId }: MessageListProps) {
   return (
     <div className="flex flex-col h-full">
       <ConnectionStatus />
-      
-      {/* Polling indicator */}
-      {isPolling && (
-        <div className="text-center py-1 bg-green-50 border-b border-green-200">
-          <span className="text-xs text-green-700">🔄 Auto-refreshing messages</span>
-        </div>
-      )}
       
       <div 
         className="flex-1 overflow-y-auto p-4 space-y-4"
@@ -126,7 +150,7 @@ export function MessageList({ contactId }: MessageListProps) {
                 <p className="text-sm text-red-500 mt-1">{error}</p>
               </div>
               <button 
-                onClick={refetch}
+                onClick={refresh}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
                 Coba Lagi

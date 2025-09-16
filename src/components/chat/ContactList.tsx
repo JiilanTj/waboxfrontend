@@ -2,7 +2,7 @@
 
 import { Search, MoreVertical, MessageCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useRestChatList } from '@/hooks/useRestChatList';
+import { useChat } from '@/hooks/useChat';
 
 interface ContactListProps {
   selectedContact: string | null;
@@ -42,19 +42,25 @@ const generateAvatar = (name: string) => {
 };
 
 export function ContactList({ selectedContact, onSelectContact, whatsappId }: ContactListProps) {
-  // Use REST API with 5-second polling for chat list
+  // Use our new useChat hook with polling enabled
   const {
-    chats,
+    data: chats,
     isLoading,
     error,
     pagination,
-    refetch,
+    refresh,
     loadMore,
-    isPolling
-  } = useRestChatList({
+    isPollingEnabled,
+    startPolling,
+    stopPolling,
+    markAsRead
+  } = useChat({
     whatsappNumberId: parseInt(whatsappId),
     limit: 50,
-    offset: 0
+    offset: 0,
+    autoFetch: true,
+    enablePolling: true, // Enable 5-second polling
+    pollingInterval: 5000
   });
 
   // Debug: Log component state changes
@@ -62,9 +68,21 @@ export function ContactList({ selectedContact, onSelectContact, whatsappId }: Co
     chatsLength: chats.length,
     isLoading,
     error,
-    isPolling,
+    isPolling: isPollingEnabled,
     whatsappId
   });
+
+  // Handle chat selection and mark as read
+  const handleSelectContact = async (chatId: string) => {
+    console.log('📖 Selecting chat and marking as read:', chatId);
+    
+    // First, select the contact
+    onSelectContact(chatId);
+    
+    // Then, mark the chat as read (no need to await as it updates local state)
+    markAsRead(chatId);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -80,13 +98,11 @@ export function ContactList({ selectedContact, onSelectContact, whatsappId }: Co
               <div className="flex items-center gap-2">
                 <h1 className="font-semibold text-gray-900">WhatsApp Business</h1>
                 <div className={`w-2 h-2 rounded-full ${
-                  isPolling ? 'bg-green-500' : 'bg-gray-400'
-                }`} title={isPolling ? 'Polling active' : 'Polling inactive'} />
+                  isPollingEnabled ? 'bg-green-500' : 'bg-gray-400'
+                }`} title={isPollingEnabled ? 'Polling active' : 'Polling inactive'} />
               </div>
               <p className="text-xs text-gray-500">
-                ID: {whatsappId} • {
-                  isPolling ? '🟢 Auto-refresh (5s)' : '⚫ Manual only'
-                }
+                ID: {whatsappId}
               </p>
             </div>
           </div>
@@ -94,13 +110,19 @@ export function ContactList({ selectedContact, onSelectContact, whatsappId }: Co
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={refetch}
+              onClick={refresh}
               disabled={isLoading}
               title="Manual refresh"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={isPollingEnabled ? stopPolling : startPolling}
+              title={isPollingEnabled ? "Stop auto-refresh" : "Start auto-refresh"}
+              className={isPollingEnabled ? "text-green-600" : "text-gray-400"}
+            >
               <MessageCircle className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="sm">
@@ -119,13 +141,6 @@ export function ContactList({ selectedContact, onSelectContact, whatsappId }: Co
           />
         </div>
       </div>
-
-      {/* Polling Status */}
-      {isPolling && (
-        <div className="p-2 text-center text-xs bg-green-50 text-green-700 border-b border-green-200">
-          🔄 Auto-refreshing every 5 seconds
-        </div>
-      )}
 
       {/* Contact List */}
       <div className="flex-1 overflow-y-auto">
@@ -146,7 +161,7 @@ export function ContactList({ selectedContact, onSelectContact, whatsappId }: Co
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={refetch}
+              onClick={refresh}
               className="text-red-600 border-red-200 hover:bg-red-50"
             >
               Try Again
@@ -171,7 +186,7 @@ export function ContactList({ selectedContact, onSelectContact, whatsappId }: Co
           return (
             <div
               key={chat.id}
-              onClick={() => onSelectContact(chat.id)}
+              onClick={() => handleSelectContact(chat.id)}
               className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 ${
                 selectedContact === chat.id ? 'bg-green-50 border-l-4 border-l-green-500' : ''
               }`}

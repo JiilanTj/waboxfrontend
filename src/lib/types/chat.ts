@@ -29,6 +29,12 @@ export interface ChatListParams {
   offset?: number;
 }
 
+// Mark as read types
+export interface MarkAsReadResponse {
+  success: boolean;
+  message: string;
+}
+
 export interface SocketChatListData {
   chats: Chat[];
   pagination?: {
