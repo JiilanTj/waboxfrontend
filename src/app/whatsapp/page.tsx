@@ -11,7 +11,8 @@ import {
   WhatsAppTable,
   WhatsAppPaginationComponent,
   CreateWhatsAppModal,
-  EditWhatsAppModal
+  EditWhatsAppModal,
+  QRCodeModal
 } from '@/components/whatsapp/index';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
@@ -46,6 +47,8 @@ function WhatsAppContent() {
 
   const {
     createSession,
+    getSession,
+    getQRCode,
     isCreating: isCreatingSession,
     allSessions,
     getAllSessions,
@@ -65,6 +68,20 @@ function WhatsAppContent() {
     open: boolean;
     whatsappNumber: WhatsAppNumber | null;
   }>({ open: false, whatsappNumber: null });
+
+  const [qrCodeModal, setQrCodeModal] = useState<{
+    open: boolean;
+    qrCode: string | null;
+    whatsappNumber: WhatsAppNumber | null;
+    sessionId: string | null;
+    session: WhatsAppSession | null;
+  }>({ 
+    open: false, 
+    qrCode: null, 
+    whatsappNumber: null,
+    sessionId: null,
+    session: null
+  });
 
   // Debounced search with useCallback
   const debouncedSearch = useCallback((value: string) => {
@@ -132,17 +149,49 @@ function WhatsAppContent() {
 
   const handleConnectWhatsApp = async (whatsappId: number) => {
     try {
-      const result = await createSession(whatsappId);
-      if (result.success) {
-        toast.success('WhatsApp berhasil terhubung!');
-        setConnectConfirm({ open: false, whatsappNumber: null });
-        getAllSessions(); // Refresh sessions to update UI
-      } else {
-        toast.error(result.error?.message || 'Gagal menghubungkan WhatsApp');
+      toast.loading('Membuat sesi koneksi...', { id: 'connecting' });
+      
+      // 1. Create session (POST)
+      const createResult = await createSession(whatsappId);
+      if (!createResult.success) {
+        toast.error(createResult.error?.message || 'Gagal membuat sesi', { id: 'connecting' });
+        return;
       }
+
+      toast.success('Sesi berhasil dibuat, mengambil QR code...', { id: 'connecting' });
+
+      // 2. Get session to retrieve QR code (GET)
+      const sessionResult = await getSession(whatsappId);
+      if (!sessionResult.success || !sessionResult.data) {
+        toast.error('Gagal mengambil data sesi', { id: 'connecting' });
+        return;
+      }
+
+      const sessionData = sessionResult.data.data;
+      const whatsappNumber = whatsappNumbers.find(wa => wa.id === whatsappId);
+      
+      // 3. Show QR code in modal if available
+      if (sessionData.qrCode) {
+        setQrCodeModal({
+          open: true,
+          qrCode: sessionData.qrCode,
+          whatsappNumber: whatsappNumber || null,
+          sessionId: sessionData.id,
+          session: sessionData
+        });
+        toast.success('QR Code siap untuk dipindai!', { id: 'connecting' });
+      } else {
+        toast.success('Sesi berhasil dibuat, menunggu QR code...', { id: 'connecting' });
+      }
+
+      // Refresh sessions data
+      getAllSessions();
+      
     } catch (error) {
-      console.error('Failed to connect WhatsApp:', error);
-      toast.error('Gagal menghubungkan WhatsApp');
+      console.error('Connect error:', error);
+      toast.error('Terjadi kesalahan saat menghubungkan', { id: 'connecting' });
+    } finally {
+      setConnectConfirm({ open: false, whatsappNumber: null });
     }
   };
 
@@ -203,6 +252,53 @@ function WhatsAppContent() {
       getAllSessions();
     }
   }, [whatsappNumbers, getAllSessions]);
+
+  // QR Code modal handlers
+  const handleRefreshQR = async (sessionId: string) => {
+    try {
+      const qrResult = await getQRCode(sessionId);
+      if (qrResult.success && qrResult.data) {
+        setQrCodeModal(prev => ({
+          ...prev,
+          qrCode: qrResult.data!.data.qrCode
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to refresh QR:', error);
+      throw error;
+    }
+  };
+
+  const handleRefreshSession = async (whatsappNumberId: number) => {
+    try {
+      const sessionResult = await getSession(whatsappNumberId);
+      if (sessionResult.success && sessionResult.data) {
+        const sessionData = sessionResult.data.data;
+        setQrCodeModal(prev => ({
+          ...prev,
+          session: sessionData,
+          qrCode: sessionData.qrCode || prev.qrCode
+        }));
+        
+        // If connected, close modal after a delay
+        if (sessionData.status === 'CONNECTED') {
+          setTimeout(() => {
+            setQrCodeModal({
+              open: false,
+              qrCode: null,
+              whatsappNumber: null,
+              sessionId: null,
+              session: null
+            });
+          }, 3000);
+        }
+      }
+      getAllSessions(); // Refresh all sessions
+    } catch (error) {
+      console.error('Failed to refresh session:', error);
+      throw error;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -319,6 +415,24 @@ function WhatsAppContent() {
           }
         }}
         isLoading={connectConfirm.whatsappNumber ? isConnecting(connectConfirm.whatsappNumber.id) : false}
+      />
+
+      {/* QR Code Modal */}
+      <QRCodeModal
+        open={qrCodeModal.open}
+        onClose={() => setQrCodeModal({
+          open: false,
+          qrCode: null,
+          whatsappNumber: null,
+          sessionId: null,
+          session: null
+        })}
+        qrCode={qrCodeModal.qrCode}
+        whatsappNumber={qrCodeModal.whatsappNumber}
+        sessionId={qrCodeModal.sessionId}
+        session={qrCodeModal.session}
+        onRefreshQR={handleRefreshQR}
+        onRefreshSession={handleRefreshSession}
       />
     </div>
   );
