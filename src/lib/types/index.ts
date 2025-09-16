@@ -27,3 +27,4 @@ export type {
   GetAllSessionsResponse,
   DeleteSessionResponse
 } from './whatsapp-session';
+export * from './chat';
