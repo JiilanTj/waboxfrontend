@@ -46,3 +46,15 @@ export interface GetQRCodeResponse {
     status: 'PENDING' | 'CONNECTED' | 'DISCONNECTED' | 'PAIRING' | 'ERROR';
   };
 }
+
+export interface GetAllSessionsResponse {
+  success: boolean;
+  message: string;
+  data: WhatsAppSession[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+}

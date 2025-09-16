@@ -9,34 +9,61 @@ import {
   Power,
   PowerOff,
   MessageSquare,
-  Phone
+  Phone,
+  Plug,
+  PlugZap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { WhatsAppNumber } from '@/lib/types';
+import { WhatsAppNumber, WhatsAppSession } from '@/lib/types';
 
 interface WhatsAppTableProps {
   whatsappNumbers: WhatsAppNumber[];
+  sessions: WhatsAppSession[];
   isLoading: boolean;
   limit: number;
   onEditWhatsApp: (whatsappNumber: WhatsAppNumber) => void;
   onDeleteWhatsApp: (whatsappNumber: WhatsAppNumber) => void;
   onToggleStatus: (whatsappNumber: WhatsAppNumber) => void;
+  onConnectWhatsApp: (whatsappNumber: WhatsAppNumber) => void;
+  onDisconnectWhatsApp: (whatsappNumber: WhatsAppNumber, session: WhatsAppSession) => void;
   isUpdating: (id: number) => boolean;
   isDeleting: (id: number) => boolean;
   isToggling: (id: number) => boolean;
+  isConnecting: (id: number) => boolean;
 }
 
 export function WhatsAppTable({ 
-  whatsappNumbers, 
+  whatsappNumbers,
+  sessions, 
   isLoading, 
   limit, 
   onEditWhatsApp, 
   onDeleteWhatsApp,
   onToggleStatus,
+  onConnectWhatsApp,
+  onDisconnectWhatsApp,
   isUpdating,
   isDeleting,
-  isToggling
+  isToggling,
+  isConnecting
 }: WhatsAppTableProps) {
+
+  // Helper function to get session for a WhatsApp number
+  const getSessionForWhatsApp = (whatsappNumberId: number): WhatsAppSession | null => {
+    return sessions.find(session => session.whatsappNumberId === whatsappNumberId) || null;
+  };
+
+  // Helper function to check if WhatsApp is connected
+  const isWhatsAppConnected = (whatsappNumberId: number): boolean => {
+    const session = getSessionForWhatsApp(whatsappNumberId);
+    return session?.status === 'CONNECTED';
+  };
+
+  // Helper function to get session status
+  const getSessionStatus = (whatsappNumberId: number): string | null => {
+    const session = getSessionForWhatsApp(whatsappNumberId);
+    return session?.status || null;
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
@@ -96,6 +123,7 @@ export function WhatsAppTable({
             <th className="text-left py-3 px-4 font-medium text-gray-900">Nama</th>
             <th className="text-left py-3 px-4 font-medium text-gray-900">Nomor WhatsApp</th>
             <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
+            <th className="text-left py-3 px-4 font-medium text-gray-900">Sesi</th>
             <th className="text-left py-3 px-4 font-medium text-gray-900">Dibuat</th>
             <th className="text-right py-3 px-4 font-medium text-gray-900">Aksi</th>
           </tr>
@@ -144,11 +172,84 @@ export function WhatsAppTable({
                   )}
                 </div>
               </td>
+              <td className="py-4 px-4">
+                {(() => {
+                  const sessionStatus = getSessionStatus(whatsappNumber.id);
+                  
+                  if (!sessionStatus) {
+                    return (
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 bg-gray-400 rounded-full"></div>
+                        <span className="text-gray-500 font-medium">Belum Ada Sesi</span>
+                      </div>
+                    );
+                  }
+                  
+                  const statusConfig = {
+                    'CONNECTED': { color: 'text-green-600', bg: 'bg-green-500', label: 'Terhubung' },
+                    'DISCONNECTED': { color: 'text-red-600', bg: 'bg-red-500', label: 'Terputus' },
+                    'PAIRING': { color: 'text-blue-600', bg: 'bg-blue-500', label: 'Pairing' },
+                    'PENDING': { color: 'text-yellow-600', bg: 'bg-yellow-500', label: 'Menunggu' },
+                    'ERROR': { color: 'text-red-600', bg: 'bg-red-500', label: 'Error' }
+                  }[sessionStatus] || { color: 'text-gray-600', bg: 'bg-gray-500', label: sessionStatus };
+                  
+                  return (
+                    <div className="flex items-center gap-2">
+                      <div className={`h-2 w-2 ${statusConfig.bg} rounded-full`}></div>
+                      <span className={`${statusConfig.color} font-medium`}>{statusConfig.label}</span>
+                    </div>
+                  );
+                })()}
+              </td>
               <td className="py-4 px-4 text-gray-600 text-sm">
                 {formatDate(whatsappNumber.createdAt)}
               </td>
               <td className="py-4 px-4">
                 <div className="flex items-center justify-end gap-2">
+                  {/* Connect/Disconnect Button - Only show if WhatsApp number is active */}
+                  {whatsappNumber.isActive && (() => {
+                    const session = getSessionForWhatsApp(whatsappNumber.id);
+                    const isConnected = isWhatsAppConnected(whatsappNumber.id);
+                    
+                    if (isConnected && session) {
+                      // Show Disconnect button
+                      return (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onDisconnectWhatsApp(whatsappNumber, session)}
+                          disabled={isConnecting(whatsappNumber.id)}
+                          className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          {isConnecting(whatsappNumber.id) ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <PlugZap className="h-3 w-3" />
+                          )}
+                          Disconnect
+                        </Button>
+                      );
+                    } else {
+                      // Show Connect button
+                      return (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onConnectWhatsApp(whatsappNumber)}
+                          disabled={isConnecting(whatsappNumber.id)}
+                          className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          {isConnecting(whatsappNumber.id) ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Plug className="h-3 w-3" />
+                          )}
+                          Connect
+                        </Button>
+                      );
+                    }
+                  })()}
+                  
                   <Button
                     variant="outline"
                     size="sm"
@@ -240,12 +341,46 @@ export function WhatsAppTable({
                 </div>
               </div>
 
-              {/* Phone Number */}
-              <div className="flex items-center gap-2 text-gray-600">
-                <Phone className="h-4 w-4" />
-                <span className="font-mono">
-                  {formatPhoneNumber(whatsappNumber.phoneNumber)}
-                </span>
+              {/* Phone Number and Session Status */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Phone className="h-4 w-4" />
+                  <span className="font-mono">
+                    {formatPhoneNumber(whatsappNumber.phoneNumber)}
+                  </span>
+                </div>
+                
+                {/* Session Status */}
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-500">Sesi:</span>
+                  {(() => {
+                    const sessionStatus = getSessionStatus(whatsappNumber.id);
+                    
+                    if (!sessionStatus) {
+                      return (
+                        <div className="flex items-center gap-1">
+                          <div className="h-1.5 w-1.5 bg-gray-400 rounded-full"></div>
+                          <span className="text-gray-500 text-sm">Belum Ada</span>
+                        </div>
+                      );
+                    }
+                    
+                    const statusConfig = {
+                      'CONNECTED': { color: 'text-green-600', bg: 'bg-green-500', label: 'Terhubung' },
+                      'DISCONNECTED': { color: 'text-red-600', bg: 'bg-red-500', label: 'Terputus' },
+                      'PAIRING': { color: 'text-blue-600', bg: 'bg-blue-500', label: 'Pairing' },
+                      'PENDING': { color: 'text-yellow-600', bg: 'bg-yellow-500', label: 'Menunggu' },
+                      'ERROR': { color: 'text-red-600', bg: 'bg-red-500', label: 'Error' }
+                    }[sessionStatus] || { color: 'text-gray-600', bg: 'bg-gray-500', label: sessionStatus };
+                    
+                    return (
+                      <div className="flex items-center gap-1">
+                        <div className={`h-1.5 w-1.5 ${statusConfig.bg} rounded-full`}></div>
+                        <span className={`${statusConfig.color} text-sm`}>{statusConfig.label}</span>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* Created Date */}
@@ -255,6 +390,50 @@ export function WhatsAppTable({
 
               {/* Actions */}
               <div className="flex gap-2 pt-2 border-t">
+                {/* Connect/Disconnect Button - Only show if WhatsApp number is active */}
+                {whatsappNumber.isActive && (() => {
+                  const session = getSessionForWhatsApp(whatsappNumber.id);
+                  const isConnected = isWhatsAppConnected(whatsappNumber.id);
+                  
+                  if (isConnected && session) {
+                    // Show Disconnect button
+                    return (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onDisconnectWhatsApp(whatsappNumber, session)}
+                        disabled={isConnecting(whatsappNumber.id)}
+                        className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        {isConnecting(whatsappNumber.id) ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <PlugZap className="h-3 w-3" />
+                        )}
+                        Disconnect
+                      </Button>
+                    );
+                  } else {
+                    // Show Connect button
+                    return (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onConnectWhatsApp(whatsappNumber)}
+                        disabled={isConnecting(whatsappNumber.id)}
+                        className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        {isConnecting(whatsappNumber.id) ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Plug className="h-3 w-3" />
+                        )}
+                        Connect
+                      </Button>
+                    );
+                  }
+                })()}
+                
                 <Button
                   variant="outline"
                   size="sm"

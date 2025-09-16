@@ -13,6 +13,17 @@ interface WhatsAppSessionState {
   isCreating: Record<number, boolean>; // keyed by whatsappNumberId
   isFetchingQR: Record<string, boolean>; // keyed by sessionId
   errors: Record<number, string>; // keyed by whatsappNumberId
+  
+  // All sessions data
+  allSessions: WhatsAppSession[];
+  allSessionsPagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  } | null;
+  isLoadingAllSessions: boolean;
+  allSessionsError: string | null;
 }
 
 export function useWhatsAppSession() {
@@ -23,6 +34,10 @@ export function useWhatsAppSession() {
     isCreating: {},
     isFetchingQR: {},
     errors: {},
+    allSessions: [],
+    allSessionsPagination: null,
+    isLoadingAllSessions: false,
+    allSessionsError: null,
   });
 
   // Get session for a WhatsApp number
@@ -189,11 +204,69 @@ export function useWhatsAppSession() {
     });
   }, []);
 
+  // Get all sessions with pagination and filtering
+  const getAllSessions = useCallback(async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    isActive?: boolean;
+  }) => {
+    setState(prev => ({ 
+      ...prev, 
+      isLoadingAllSessions: true, 
+      allSessionsError: null 
+    }));
+
+    try {
+      const response = await whatsappSessionApi.getAllSessions(params);
+      if (response.success && response.data) {
+        setState(prev => ({
+          ...prev,
+          allSessions: response.data!.data,
+          allSessionsPagination: response.data!.pagination,
+          isLoadingAllSessions: false,
+          allSessionsError: null,
+        }));
+      } else {
+        setState(prev => ({
+          ...prev,
+          allSessions: [],
+          allSessionsPagination: null,
+          isLoadingAllSessions: false,
+          allSessionsError: response.error?.message || 'Failed to fetch sessions',
+        }));
+      }
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setState(prev => ({
+        ...prev,
+        allSessions: [],
+        allSessionsPagination: null,
+        isLoadingAllSessions: false,
+        allSessionsError: errorMessage,
+      }));
+      
+      return {
+        success: false,
+        error: {
+          error: 'NetworkError',
+          message: errorMessage
+        }
+      };
+    }
+  }, []);
+
   return {
     // Data
     sessions: state.sessions,
     qrCodes: state.qrCodes,
     errors: state.errors,
+    allSessions: state.allSessions,
+    allSessionsPagination: state.allSessionsPagination,
+    isLoadingAllSessions: state.isLoadingAllSessions,
+    allSessionsError: state.allSessionsError,
     
     // Actions
     getSession,
@@ -201,6 +274,7 @@ export function useWhatsAppSession() {
     getQRCode,
     clearSession,
     clearQRCode,
+    getAllSessions,
     
     // Loading states
     isLoading: (whatsappNumberId: number) => state.isLoading[whatsappNumberId] || false,

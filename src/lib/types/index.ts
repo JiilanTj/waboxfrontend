@@ -23,5 +23,6 @@ export type {
   WhatsAppSession,
   CreateSessionResponse,
   GetSessionResponse,
-  GetQRCodeResponse
+  GetQRCodeResponse,
+  GetAllSessionsResponse
 } from './whatsapp-session';
