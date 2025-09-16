@@ -58,3 +58,8 @@ export interface GetAllSessionsResponse {
     itemsPerPage: number;
   };
 }
+
+export interface DeleteSessionResponse {
+  success: boolean;
+  message: string;
+}

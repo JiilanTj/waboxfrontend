@@ -3,6 +3,7 @@ import {
   GetSessionResponse,
   GetQRCodeResponse,
   GetAllSessionsResponse,
+  DeleteSessionResponse,
   ApiResponse
 } from '@/lib/types';
 import { apiClient } from '@/lib/utils/api-client';
@@ -49,5 +50,12 @@ export const whatsappSessionApi = {
     
     const queryString = searchParams.toString();
     return apiClient.get<GetAllSessionsResponse>(`/sessions${queryString ? `?${queryString}` : ''}`);
+  },
+
+  /**
+   * DELETE /sessions/:sessionId/permanent - delete session permanently
+   */
+  async deleteSession(sessionId: string): Promise<ApiResponse<DeleteSessionResponse>> {
+    return apiClient.delete<DeleteSessionResponse>(`/sessions/${sessionId}/permanent`);
   }
 };

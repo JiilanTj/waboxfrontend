@@ -12,6 +12,7 @@ interface WhatsAppSessionState {
   isLoading: Record<number, boolean>; // keyed by whatsappNumberId
   isCreating: Record<number, boolean>; // keyed by whatsappNumberId
   isFetchingQR: Record<string, boolean>; // keyed by sessionId
+  isDeleting: Record<string, boolean>; // keyed by sessionId
   errors: Record<number, string>; // keyed by whatsappNumberId
   
   // All sessions data
@@ -33,6 +34,7 @@ export function useWhatsAppSession() {
     isLoading: {},
     isCreating: {},
     isFetchingQR: {},
+    isDeleting: {},
     errors: {},
     allSessions: [],
     allSessionsPagination: null,
@@ -183,11 +185,12 @@ export function useWhatsAppSession() {
       delete newState.isLoading[whatsappNumberId];
       delete newState.isCreating[whatsappNumberId];
       
-      // Also clear QR codes for this session
+      // Also clear QR codes and deleting state for this session
       const session = prev.sessions[whatsappNumberId];
       if (session?.id) {
         delete newState.qrCodes[session.id];
         delete newState.isFetchingQR[session.id];
+        delete newState.isDeleting[session.id];
       }
       
       return newState;
@@ -200,6 +203,7 @@ export function useWhatsAppSession() {
       const newState = { ...prev };
       delete newState.qrCodes[sessionId];
       delete newState.isFetchingQR[sessionId];
+      delete newState.isDeleting[sessionId];
       return newState;
     });
   }, []);
@@ -258,6 +262,64 @@ export function useWhatsAppSession() {
     }
   }, []);
 
+  // Delete session permanently
+  const deleteSession = useCallback(async (sessionId: string) => {
+    setState(prev => ({
+      ...prev,
+      isDeleting: { ...prev.isDeleting, [sessionId]: true }
+    }));
+
+    try {
+      const response = await whatsappSessionApi.deleteSession(sessionId);
+      if (response.success) {
+        setState(prev => {
+          const newState = { ...prev };
+          
+          // Remove from isDeleting
+          delete newState.isDeleting[sessionId];
+          
+          // Remove QR code for this session
+          delete newState.qrCodes[sessionId];
+          delete newState.isFetchingQR[sessionId];
+          
+          // Find and remove session from sessions by sessionId
+          Object.keys(newState.sessions).forEach(whatsappNumberId => {
+            const session = newState.sessions[Number(whatsappNumberId)];
+            if (session?.id === sessionId) {
+              delete newState.sessions[Number(whatsappNumberId)];
+              delete newState.errors[Number(whatsappNumberId)];
+              delete newState.isLoading[Number(whatsappNumberId)];
+              delete newState.isCreating[Number(whatsappNumberId)];
+            }
+          });
+
+          // Remove from allSessions array
+          newState.allSessions = newState.allSessions.filter(session => session.id !== sessionId);
+          
+          return newState;
+        });
+      } else {
+        setState(prev => ({
+          ...prev,
+          isDeleting: { ...prev.isDeleting, [sessionId]: false }
+        }));
+      }
+      return response;
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        isDeleting: { ...prev.isDeleting, [sessionId]: false }
+      }));
+      return {
+        success: false,
+        error: {
+          error: 'NetworkError',
+          message: error instanceof Error ? error.message : 'Unknown error occurred'
+        }
+      };
+    }
+  }, []);
+
   return {
     // Data
     sessions: state.sessions,
@@ -275,11 +337,13 @@ export function useWhatsAppSession() {
     clearSession,
     clearQRCode,
     getAllSessions,
+    deleteSession,
     
     // Loading states
     isLoading: (whatsappNumberId: number) => state.isLoading[whatsappNumberId] || false,
     isCreating: (whatsappNumberId: number) => state.isCreating[whatsappNumberId] || false,
     isFetchingQR: (sessionId: string) => state.isFetchingQR[sessionId] || false,
+    isDeleting: (sessionId: string) => state.isDeleting[sessionId] || false,
     
     // Helper functions
     getSessionByWhatsAppId: (whatsappNumberId: number) => state.sessions[whatsappNumberId],

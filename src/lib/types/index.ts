@@ -24,5 +24,6 @@ export type {
   CreateSessionResponse,
   GetSessionResponse,
   GetQRCodeResponse,
-  GetAllSessionsResponse
+  GetAllSessionsResponse,
+  DeleteSessionResponse
 } from './whatsapp-session';

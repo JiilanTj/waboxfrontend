@@ -30,6 +30,7 @@ interface WhatsAppTableProps {
   isDeleting: (id: number) => boolean;
   isToggling: (id: number) => boolean;
   isConnecting: (id: number) => boolean;
+  isDisconnecting: (sessionId: string) => boolean;
 }
 
 export function WhatsAppTable({ 
@@ -45,7 +46,8 @@ export function WhatsAppTable({
   isUpdating,
   isDeleting,
   isToggling,
-  isConnecting
+  isConnecting,
+  isDisconnecting
 }: WhatsAppTableProps) {
 
   // Helper function to get session for a WhatsApp number
@@ -231,10 +233,10 @@ export function WhatsAppTable({
                           variant="outline"
                           size="sm"
                           onClick={() => onDisconnectWhatsApp(whatsappNumber, session)}
-                          disabled={isConnecting(whatsappNumber.id)}
+                          disabled={isDisconnecting(session.id)}
                           className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
-                          {isConnecting(whatsappNumber.id) ? (
+                          {isDisconnecting(session.id) ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           ) : (
                             <PlugZap className="h-3 w-3" />
@@ -415,10 +417,10 @@ export function WhatsAppTable({
                         variant="outline"
                         size="sm"
                         onClick={() => onDisconnectWhatsApp(whatsappNumber, session)}
-                        disabled={isConnecting(whatsappNumber.id)}
+                        disabled={isDisconnecting(session.id)}
                         className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
-                        {isConnecting(whatsappNumber.id) ? (
+                        {isDisconnecting(session.id) ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
                         ) : (
                           <PlugZap className="h-3 w-3" />

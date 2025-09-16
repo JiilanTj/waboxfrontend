@@ -49,7 +49,9 @@ function WhatsAppContent() {
     createSession,
     getSession,
     getQRCode,
+    deleteSession,
     isCreating: isCreatingSession,
+    isDeleting: isDeletingSession,
     allSessions,
     getAllSessions,
     isLoadingAllSessions,
@@ -196,28 +198,23 @@ function WhatsAppContent() {
   };
 
   const isConnecting = (id: number) => isCreatingSession(id);
+  const isDisconnecting = (sessionId: string) => isDeletingSession(sessionId);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleDisconnectWhatsApp = async (_whatsappNumber: WhatsAppNumber, _session: WhatsAppSession) => {
+  const handleDisconnectWhatsApp = async (whatsappNumber: WhatsAppNumber, session: WhatsAppSession) => {
     try {
-      // TODO: Implement actual disconnect session logic
-      // For now, we'll simulate disconnection
-      // const result = await disconnectSession(session.id);
-      // if (result.success) {
-      //   toast.success('WhatsApp berhasil diputus!');
-      //   getAllSessions(); // Refresh sessions
-      // } else {
-      //   toast.error(result.error?.message || 'Gagal memutus WhatsApp');
-      // }
+      toast.loading('Memutus koneksi WhatsApp...', { id: 'disconnecting' });
       
-      // Mock successful disconnection for now
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success('WhatsApp berhasil diputus!');
-      getAllSessions(); // Refresh sessions to update UI
+      const result = await deleteSession(session.id);
+      if (result.success) {
+        toast.success('WhatsApp berhasil diputus!', { id: 'disconnecting' });
+        getAllSessions(); // Refresh sessions to update UI
+      } else {
+        toast.error(result.error?.message || 'Gagal memutus WhatsApp', { id: 'disconnecting' });
+      }
       
     } catch (error) {
       console.error('Failed to disconnect WhatsApp:', error);
-      toast.error('Gagal memutus koneksi WhatsApp');
+      toast.error('Gagal memutus koneksi WhatsApp', { id: 'disconnecting' });
     }
   };
 
@@ -347,6 +344,7 @@ function WhatsAppContent() {
         isDeleting={isDeleting}
         isToggling={isToggling}
         isConnecting={isConnecting}
+        isDisconnecting={isDisconnecting}
       />
 
       {/* Pagination */}
