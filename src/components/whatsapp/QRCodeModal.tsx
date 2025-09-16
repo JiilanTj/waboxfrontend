@@ -293,12 +293,21 @@ export function QRCodeModal({
                   <p className="text-sm text-green-700">
                     WhatsApp berhasil terhubung dan siap digunakan.
                   </p>
-                  <Button
-                    onClick={onClose}
-                    className="mt-3 bg-green-600 hover:bg-green-700"
-                  >
-                    Tutup
-                  </Button>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      onClick={() => window.open(`/whatsapp/chat/${whatsappNumber?.id}`, '_blank')}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    >
+                      Buka Chat
+                    </Button>
+                    <Button
+                      onClick={onClose}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Tutup
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

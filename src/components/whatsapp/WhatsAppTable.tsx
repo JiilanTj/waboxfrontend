@@ -206,6 +206,19 @@ export function WhatsAppTable({
               </td>
               <td className="py-4 px-4">
                 <div className="flex items-center justify-end gap-2">
+                  {/* Buka Chat Button - Show for connected WhatsApp */}
+                  {whatsappNumber.isActive && isWhatsAppConnected(whatsappNumber.id) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/whatsapp/chat/${whatsappNumber.id}`, '_blank')}
+                      className="flex items-center gap-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+                    >
+                      <MessageSquare className="h-3 w-3" />
+                      Buka Chat
+                    </Button>
+                  )}
+                  
                   {/* Connect/Disconnect Button - Only show if WhatsApp number is active */}
                   {whatsappNumber.isActive && (() => {
                     const session = getSessionForWhatsApp(whatsappNumber.id);
