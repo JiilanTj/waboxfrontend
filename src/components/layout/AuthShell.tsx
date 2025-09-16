@@ -16,6 +16,7 @@ export function AuthShell({ children }: AuthShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const isLoginPage = pathname === '/login';
+  const isChatPage = pathname.includes('/whatsapp/chat/');
 
   const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
 
@@ -25,6 +26,11 @@ export function AuthShell({ children }: AuthShellProps) {
   // If not authenticated OR on login page, render children only
   if (!isAuthenticated || isLoginPage) {
     return <>{children}</>;
+  }
+
+  // If on chat page, render full screen without sidebar and header
+  if (isChatPage) {
+    return <div className="h-screen">{children}</div>;
   }
 
   return (
