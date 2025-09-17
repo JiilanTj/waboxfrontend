@@ -9,12 +9,14 @@ interface WhatsAppHeaderProps {
   onCreateWhatsApp: () => void;
   onRefresh: () => void;
   isLoading: boolean;
+  isAdmin: boolean; // added
 }
 
 export function WhatsAppHeader({ 
   onCreateWhatsApp, 
   onRefresh, 
-  isLoading 
+  isLoading,
+  isAdmin
 }: WhatsAppHeaderProps) {
   return (
     <Card>
@@ -53,13 +55,15 @@ export function WhatsAppHeader({
               Refresh
             </Button>
             
-            <Button
-              onClick={onCreateWhatsApp}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-            >
-              <Plus className="h-4 w-4" />
-              Tambah WhatsApp
-            </Button>
+            {isAdmin && (
+              <Button
+                onClick={onCreateWhatsApp}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+              >
+                <Plus className="h-4 w-4" />
+                Tambah WhatsApp
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>

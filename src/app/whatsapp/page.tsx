@@ -65,10 +65,12 @@ function WhatsAppContent() {
     isLoading: isLoadingPermissions 
   } = useWAPermission({ autoFetch: true });
 
+  const isAdmin = user?.role === 'ADMIN';
+
   // Check if user has permission to access a WhatsApp number
   const hasPermission = useCallback((whatsappNumberId: number): boolean => {
     // Admin users have access to all numbers
-    if (user?.role === 'ADMIN') {
+    if (isAdmin) {
       return true;
     }
 
@@ -76,7 +78,7 @@ function WhatsAppContent() {
     return myPermissions.some(permission => 
       permission.whatsappNumberId === whatsappNumberId
     );
-  }, [user?.role, myPermissions]);
+  }, [isAdmin, myPermissions]);
 
   const [searchInput, setSearchInput] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -121,7 +123,16 @@ function WhatsAppContent() {
     return () => clearTimeout(handle);
   }, [searchInput, debouncedSearch]);
 
+  const denyIfNotAdmin = () => {
+    if (!isAdmin) {
+      toast.error('Akses ditolak. Hanya ADMIN yang dapat melakukan tindakan ini.');
+      return true;
+    }
+    return false;
+  };
+
   const handleCreateWhatsApp = async (data: CreateWhatsAppRequest) => {
+    if (denyIfNotAdmin()) return;
     const result = await createWhatsApp(data);
     if (result.success) {
       setCreateModalOpen(false);
@@ -132,6 +143,7 @@ function WhatsAppContent() {
   };
 
   const handleUpdateWhatsApp = async (id: number, data: UpdateWhatsAppRequest) => {
+    if (denyIfNotAdmin()) return;
     const result = await updateWhatsApp(id, data);
     if (result.success) {
       setEditingWhatsApp(null);
@@ -142,6 +154,7 @@ function WhatsAppContent() {
   };
 
   const handleDeleteWhatsApp = async (whatsappId: number) => {
+    if (denyIfNotAdmin()) return;
     const result = await deleteWhatsApp(whatsappId);
     if (result.success) {
       setDeleteConfirm({ open: false, whatsappNumber: null });
@@ -152,6 +165,7 @@ function WhatsAppContent() {
   };
 
   const handleToggleStatus = async (whatsappNumber: WhatsAppNumber) => {
+    if (denyIfNotAdmin()) return;
     const result = await toggleWhatsAppStatus(whatsappNumber.id);
     if (result.success) {
       const statusText = whatsappNumber.isActive ? 'dinonaktifkan' : 'diaktifkan';
@@ -162,17 +176,25 @@ function WhatsAppContent() {
   };
 
   const handleDeleteClick = (whatsappNumber: WhatsAppNumber) => {
+    if (!isAdmin) {
+      toast.error('Akses ditolak. Hanya ADMIN yang dapat menghapus nomor.');
+      return;
+    }
     setDeleteConfirm({ open: true, whatsappNumber });
   };
 
   const handleConnectClick = (whatsappNumber: WhatsAppNumber) => {
+    if (!isAdmin) {
+      toast.error('Akses ditolak. Hanya ADMIN yang dapat menghubungkan WhatsApp.');
+      return;
+    }
     setConnectConfirm({ open: true, whatsappNumber });
   };
 
   const handleConnectWhatsApp = async (whatsappId: number) => {
+    if (denyIfNotAdmin()) return;
     try {
       toast.loading('Membuat sesi koneksi...', { id: 'connecting' });
-      
       // 1. Create session (POST)
       const createResult = await createSession(whatsappId);
       if (!createResult.success) {
@@ -221,6 +243,7 @@ function WhatsAppContent() {
   const isDisconnecting = (sessionId: string) => isDeletingSession(sessionId);
 
   const handleDisconnectWhatsApp = async (whatsappNumber: WhatsAppNumber, session: WhatsAppSession) => {
+    if (denyIfNotAdmin()) return;
     try {
       toast.loading('Memutus koneksi WhatsApp...', { id: 'disconnecting' });
       
@@ -239,6 +262,10 @@ function WhatsAppContent() {
   };
 
   const handleEditWhatsApp = (whatsappNumber: WhatsAppNumber) => {
+    if (!isAdmin) {
+      toast.error('Akses ditolak. Hanya ADMIN yang dapat mengedit nomor.');
+      return;
+    }
     setEditingWhatsApp(whatsappNumber);
   };
 
@@ -321,9 +348,16 @@ function WhatsAppContent() {
     <div className="space-y-6">
       {/* Header */}
       <WhatsAppHeader
-        onCreateWhatsApp={() => setCreateModalOpen(true)}
+        onCreateWhatsApp={() => {
+          if (!isAdmin) {
+            toast.error('Akses ditolak. Hanya ADMIN yang dapat membuat nomor WhatsApp.');
+            return;
+          }
+          setCreateModalOpen(true);
+        }}
         onRefresh={() => fetchWhatsApp()}
         isLoading={isLoading}
+        isAdmin={isAdmin}
       />
 
       {/* Filters */}
@@ -366,7 +400,7 @@ function WhatsAppContent() {
         isConnecting={isConnecting}
         isDisconnecting={isDisconnecting}
         hasPermission={hasPermission}
-        isAdmin={user?.role === 'ADMIN'}
+        isAdmin={isAdmin}
         isLoadingPermissions={isLoadingPermissions}
       />
 

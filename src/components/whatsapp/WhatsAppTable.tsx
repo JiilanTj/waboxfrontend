@@ -282,33 +282,39 @@ export function WhatsAppTable({
                           </Button>
                         );
                       })()}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onToggleStatus(whatsappNumber)}
-                        disabled={isToggling(whatsappNumber.id)}
-                        className={cn("flex items-center gap-1", whatsappNumber.isActive ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "text-green-600 hover:text-green-700 hover:bg-green-50")}
-                      >
-                        {isToggling(whatsappNumber.id) ? (<Loader2 className="h-3 w-3 animate-spin" />) : whatsappNumber.isActive ? (<PowerOff className="h-3 w-3" />) : (<Power className="h-3 w-3" />)}
-                        {whatsappNumber.isActive ? 'Nonaktifkan' : 'Aktifkan'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEditWhatsApp(whatsappNumber)}
-                        disabled={isUpdating(whatsappNumber.id)}
-                      >
-                        {isUpdating(whatsappNumber.id) ? (<Loader2 className="h-3 w-3 animate-spin" />) : (<Edit className="h-3 w-3" />)}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onDeleteWhatsApp(whatsappNumber)}
-                        disabled={isDeleting(whatsappNumber.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        {isDeleting(whatsappNumber.id) ? (<Loader2 className="h-3 w-3 animate-spin" />) : (<Trash2 className="h-3 w-3" />)}
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onToggleStatus(whatsappNumber)}
+                          disabled={isToggling(whatsappNumber.id)}
+                          className={cn("flex items-center gap-1", whatsappNumber.isActive ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "text-green-600 hover:text-green-700 hover:bg-green-50")}
+                        >
+                          {isToggling(whatsappNumber.id) ? (<Loader2 className="h-3 w-3 animate-spin" />) : whatsappNumber.isActive ? (<PowerOff className="h-3 w-3" />) : (<Power className="h-3 w-3" />)}
+                          {whatsappNumber.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                        </Button>
+                      )}
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onEditWhatsApp(whatsappNumber)}
+                            disabled={isUpdating(whatsappNumber.id)}
+                          >
+                            {isUpdating(whatsappNumber.id) ? (<Loader2 className="h-3 w-3 animate-spin" />) : (<Edit className="h-3 w-3" />)}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onDeleteWhatsApp(whatsappNumber)}
+                            disabled={isDeleting(whatsappNumber.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            {isDeleting(whatsappNumber.id) ? (<Loader2 className="h-3 w-3 animate-spin" />) : (<Trash2 className="h-3 w-3" />)}
+                          </Button>
+                        </>
+                      )}
                     </div>
                   )}
                 </td>
@@ -477,54 +483,58 @@ export function WhatsAppTable({
                         }
                       })()}
                       
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onToggleStatus(whatsappNumber)}
-                        disabled={isToggling(whatsappNumber.id)}
-                        className={cn(
-                          "flex-1 flex items-center justify-center gap-1",
-                          whatsappNumber.isActive 
-                            ? "text-red-600 hover:text-red-700 hover:bg-red-50" 
-                            : "text-green-600 hover:text-green-700 hover:bg-green-50"
-                        )}
-                      >
-                        {isToggling(whatsappNumber.id) ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : whatsappNumber.isActive ? (
-                          <PowerOff className="h-3 w-3" />
-                        ) : (
-                          <Power className="h-3 w-3" />
-                        )}
-                        {whatsappNumber.isActive ? 'Nonaktifkan' : 'Aktifkan'}
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEditWhatsApp(whatsappNumber)}
-                        disabled={isUpdating(whatsappNumber.id)}
-                      >
-                        {isUpdating(whatsappNumber.id) ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Edit className="h-3 w-3" />
-                        )}
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onDeleteWhatsApp(whatsappNumber)}
-                        disabled={isDeleting(whatsappNumber.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        {isDeleting(whatsappNumber.id) ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3 w-3" />
-                        )}
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onToggleStatus(whatsappNumber)}
+                          disabled={isToggling(whatsappNumber.id)}
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-1",
+                            whatsappNumber.isActive 
+                              ? "text-red-600 hover:text-red-700 hover:bg-red-50" 
+                              : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                          )}
+                        >
+                          {isToggling(whatsappNumber.id) ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : whatsappNumber.isActive ? (
+                            <PowerOff className="h-3 w-3" />
+                          ) : (
+                            <Power className="h-3 w-3" />
+                          )}
+                          {whatsappNumber.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                        </Button>
+                      )}
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onEditWhatsApp(whatsappNumber)}
+                            disabled={isUpdating(whatsappNumber.id)}
+                          >
+                            {isUpdating(whatsappNumber.id) ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Edit className="h-3 w-3" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onDeleteWhatsApp(whatsappNumber)}
+                            disabled={isDeleting(whatsappNumber.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            {isDeleting(whatsappNumber.id) ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
