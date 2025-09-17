@@ -1,12 +1,12 @@
 import { WhatsAppNumber } from './whatsapp';
 
 export interface WAPermission {
-  id: number;
+  id: number | null;
   userId: number;
   whatsappNumberId: number;
   whatsappNumber: WhatsAppNumber;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 export interface CreateWAPermissionRequest {
@@ -42,4 +42,10 @@ export interface WAPermissionByUserResponse {
   success: boolean;
   message: string;
   data: WAPermission[];
+}
+
+export interface DeleteWAPermissionResponse {
+  success: boolean;
+  message: string;
+  data: WAPermission;
 }

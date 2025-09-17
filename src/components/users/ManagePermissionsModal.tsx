@@ -38,6 +38,7 @@ interface ManagePermissionsModalProps {
   availableWhatsApps: WhatsAppNumber[];
   isLoading: boolean;
   isCreating: boolean;
+  isDeletingPermission?: (permissionId: number) => boolean;
   onCreatePermission: (userId: number, whatsappNumberId: number) => Promise<void>;
   onRemovePermission?: (permissionId: number) => Promise<void>;
 }
@@ -50,12 +51,17 @@ export function ManagePermissionsModal({
   availableWhatsApps,
   isLoading,
   isCreating,
+  isDeletingPermission,
   onCreatePermission,
   onRemovePermission
 }: ManagePermissionsModalProps) {
   const [selectedWhatsAppId, setSelectedWhatsAppId] = useState<number | null>(null);
 
-  const formatDate = (dateString: string) => {
+  // Check if this is an admin user (permissions with null id)
+  const isAdminUser = permissions.length > 0 && permissions.every(p => p.id === null);
+  
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('id-ID', {
       year: 'numeric',
       month: 'short',
@@ -123,8 +129,26 @@ export function ManagePermissionsModal({
         </DialogHeader>
 
         <div className="overflow-y-auto max-h-96 -mx-6 px-6">
-          {/* Add Permission Section */}
-          {availableOptions.length > 0 && (
+          {/* Admin Notice */}
+          {isAdminUser && (
+            <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Shield className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-purple-900 mb-1">Akses Administrator</h3>
+                  <p className="text-sm text-purple-700">
+                    Sebagai ADMIN, pengguna ini memiliki akses otomatis ke semua nomor WhatsApp ({permissions.length} nomor). 
+                    Tidak perlu menambah atau menghapus izin secara manual.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add Permission Section - Only for non-admin users */}
+          {!isAdminUser && availableOptions.length > 0 && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                 <Plus className="h-4 w-4 text-blue-600" />
@@ -182,13 +206,13 @@ export function ManagePermissionsModal({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium text-gray-900">
-                  Izin WhatsApp Saat Ini ({permissions.length})
+                  {isAdminUser ? `Akses WhatsApp Administrator (${permissions.length})` : `Izin WhatsApp Saat Ini (${permissions.length})`}
                 </h3>
               </div>
 
               <div className="grid gap-4">
-                {permissions.map((permission) => (
-                  <Card key={permission.id} className="border border-gray-200 hover:border-gray-300 transition-colors">
+                {permissions.map((permission, index) => (
+                  <Card key={permission.id || `admin-${index}`} className="border border-gray-200 hover:border-gray-300 transition-colors">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
@@ -220,29 +244,58 @@ export function ManagePermissionsModal({
                               Nonaktif
                             </div>
                           )}
+
+                          {/* Admin badge for null permissions */}
+                          {permission.id === null && (
+                            <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
+                              <Shield className="h-3 w-3" />
+                              Admin
+                            </div>
+                          )}
                           
-                          {onRemovePermission && (
+                          {/* Only show remove button for non-admin permissions */}
+                          {onRemovePermission && permission.id !== null && (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => onRemovePermission(permission.id)}
+                              onClick={() => onRemovePermission(permission.id as number)}
+                              disabled={isDeletingPermission?.(permission.id)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2"
                             >
-                              <X className="h-3 w-3" />
+                              {isDeletingPermission?.(permission.id) ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <X className="h-3 w-3" />
+                              )}
                             </Button>
                           )}
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 text-xs text-gray-500 border-t border-gray-100 pt-3">
-                        <div className="flex items-center gap-2">
-                          <Hash className="h-3 w-3" />
-                          <span>ID Izin: {permission.id}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-3 w-3" />
-                          <span>Dibuat: {formatDate(permission.createdAt)}</span>
-                        </div>
+                        {permission.id !== null ? (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <Hash className="h-3 w-3" />
+                              <span>ID Izin: {permission.id}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              <span>Dibuat: {formatDate(permission.createdAt)}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-3 w-3" />
+                              <span>Tipe: Akses Administrator</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              <span>Status: Otomatis</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

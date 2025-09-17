@@ -6,6 +6,7 @@ import {
   WAPermission,
   CreateWAPermissionRequest,
   CreateWAPermissionResponse,
+  DeleteWAPermissionResponse,
   WAPermissionListResponse,
   MyWAPermissionListResponse,
   WAPermissionByUserResponse
@@ -27,6 +28,8 @@ interface WAPermissionState {
   } | null;
   isLoading: boolean;
   isCreating: boolean;
+  isDeleting: boolean;
+  deletingPermissionIds: Set<number>;
   error: string | null;
 }
 
@@ -40,6 +43,8 @@ export function useWAPermission(options: UseWAPermissionOptions = {}) {
     pagination: null,
     isLoading: false,
     isCreating: false,
+    isDeleting: false,
+    deletingPermissionIds: new Set(),
     error: null,
   });
 
@@ -211,6 +216,71 @@ export function useWAPermission(options: UseWAPermissionOptions = {}) {
     }
   }, []);
 
+  // Delete permission
+  const deletePermission = useCallback(async (permissionId: number): Promise<DeleteWAPermissionResponse | null> => {
+    setState(prev => ({ 
+      ...prev, 
+      isDeleting: true, 
+      deletingPermissionIds: new Set(prev.deletingPermissionIds).add(permissionId),
+      error: null 
+    }));
+    console.log('🗑️ Deleting WhatsApp permission...', permissionId);
+
+    try {
+      const response = await waPermissionApi.delete(permissionId);
+      console.log('📋 Delete permission response:', response);
+
+      if (response.success && response.data) {
+        const responseData = response.data as DeleteWAPermissionResponse;
+        setState(prev => {
+          const newDeletingIds = new Set(prev.deletingPermissionIds);
+          newDeletingIds.delete(permissionId);
+          return {
+            ...prev,
+            isDeleting: newDeletingIds.size > 0,
+            deletingPermissionIds: newDeletingIds,
+            error: null,
+          };
+        });
+        console.log('✅ Permission deleted successfully');
+        
+        // Refresh permissions after deletion
+        fetchPermissions();
+        fetchMyPermissions();
+        
+        return responseData;
+      } else {
+        const errorMessage = response.error?.message || 'Failed to delete permission';
+        setState(prev => {
+          const newDeletingIds = new Set(prev.deletingPermissionIds);
+          newDeletingIds.delete(permissionId);
+          return {
+            ...prev,
+            isDeleting: newDeletingIds.size > 0,
+            deletingPermissionIds: newDeletingIds,
+            error: errorMessage,
+          };
+        });
+        console.log('❌ Failed to delete permission:', errorMessage);
+        return null;
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setState(prev => {
+        const newDeletingIds = new Set(prev.deletingPermissionIds);
+        newDeletingIds.delete(permissionId);
+        return {
+          ...prev,
+          isDeleting: newDeletingIds.size > 0,
+          deletingPermissionIds: newDeletingIds,
+          error: errorMessage,
+        };
+      });
+      console.log('💥 Delete permission error:', error);
+      return null;
+    }
+  }, [fetchPermissions, fetchMyPermissions]);
+
   // Auto-fetch on mount
   useEffect(() => {
     if (autoFetch) {
@@ -229,12 +299,15 @@ export function useWAPermission(options: UseWAPermissionOptions = {}) {
     // Loading states
     isLoading: state.isLoading,
     isCreating: state.isCreating,
+    isDeleting: state.isDeleting,
+    isDeletingPermission: (permissionId: number | null) => permissionId ? state.deletingPermissionIds.has(permissionId) : false,
     error: state.error,
     
     // Actions
     fetchPermissions,
     fetchMyPermissions,
     createPermission,
+    deletePermission,
     fetchPermissionsByUserId,
     
     // Helper computed values

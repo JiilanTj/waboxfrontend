@@ -2,6 +2,7 @@ import { apiClient } from '@/lib/utils/api-client';
 import {
   CreateWAPermissionRequest,
   CreateWAPermissionResponse,
+  DeleteWAPermissionResponse,
   WAPermissionListResponse,
   MyWAPermissionListResponse,
   WAPermissionByUserResponse,
@@ -136,6 +137,38 @@ export const waPermissionApi = {
         error: { 
           error: 'user_permissions_fetch_error',
           message: error instanceof Error ? error.message : 'Failed to fetch user WhatsApp permissions' 
+        },
+        data: undefined
+      };
+    }
+  },
+
+  /**
+   * DELETE /wapermission/{id} - delete WhatsApp permission
+   */
+  async delete(permissionId: number): Promise<ApiResponse<DeleteWAPermissionResponse>> {
+    try {
+      const response = await apiClient.delete<DeleteWAPermissionResponse>(`/wapermission/${permissionId}`);
+      
+      if (response.success && response.data) {
+        return response;
+      } else {
+        return {
+          success: false,
+          error: { 
+            error: 'permission_deletion_failed',
+            message: response.error?.message || 'Failed to delete WhatsApp permission' 
+          },
+          data: undefined
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error in deleteWAPermission API:', error);
+      return {
+        success: false,
+        error: { 
+          error: 'permission_deletion_error',
+          message: error instanceof Error ? error.message : 'Failed to delete WhatsApp permission' 
         },
         data: undefined
       };

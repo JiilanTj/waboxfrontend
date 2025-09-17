@@ -47,8 +47,10 @@ function UsersContent() {
     userPermissions,
     fetchPermissionsByUserId,
     createPermission,
+    deletePermission,
     isLoading: isLoadingPermissions,
-    isCreating: isCreatingPermission
+    isCreating: isCreatingPermission,
+    isDeletingPermission
   } = useWAPermission({ autoFetch: false });
 
   const {
@@ -144,6 +146,19 @@ function UsersContent() {
       await fetchPermissionsByUserId(userId);
     } else {
       toast.error('Gagal menambahkan izin WhatsApp');
+    }
+  };
+
+  const handleRemovePermission = async (permissionId: number) => {
+    const result = await deletePermission(permissionId);
+    if (result) {
+      toast.success('Izin WhatsApp berhasil dihapus!');
+      // Refresh permissions after deletion
+      if (managingPermissionsUser) {
+        await fetchPermissionsByUserId(managingPermissionsUser.id);
+      }
+    } else {
+      toast.error('Gagal menghapus izin WhatsApp');
     }
   };
 
@@ -275,7 +290,9 @@ function UsersContent() {
         availableWhatsApps={whatsappNumbers}
         isLoading={isLoadingPermissions}
         isCreating={isCreatingPermission}
+        isDeletingPermission={isDeletingPermission}
         onCreatePermission={handleCreatePermission}
+        onRemovePermission={handleRemovePermission}
       />
     </div>
   );

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import AuthGuard from '@/components/AuthGuard';
-import { useWhatsApp, useWhatsAppSession } from '@/hooks';
+import { useWhatsApp, useWhatsAppSession, useWAPermission, useAuth } from '@/hooks';
 import { WhatsAppNumber, CreateWhatsAppRequest, UpdateWhatsAppRequest, WhatsAppSession } from '@/lib/types';
 import {
   WhatsAppHeader,
@@ -57,6 +57,26 @@ function WhatsAppContent() {
     isLoadingAllSessions,
     allSessionsError,
   } = useWhatsAppSession();
+
+  // Get user permissions for WhatsApp numbers
+  const { user } = useAuth();
+  const { 
+    myPermissions, 
+    isLoading: isLoadingPermissions 
+  } = useWAPermission({ autoFetch: true });
+
+  // Check if user has permission to access a WhatsApp number
+  const hasPermission = useCallback((whatsappNumberId: number): boolean => {
+    // Admin users have access to all numbers
+    if (user?.role === 'ADMIN') {
+      return true;
+    }
+
+    // Check if user has explicit permission for this number
+    return myPermissions.some(permission => 
+      permission.whatsappNumberId === whatsappNumberId
+    );
+  }, [user?.role, myPermissions]);
 
   const [searchInput, setSearchInput] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -345,6 +365,9 @@ function WhatsAppContent() {
         isToggling={isToggling}
         isConnecting={isConnecting}
         isDisconnecting={isDisconnecting}
+        hasPermission={hasPermission}
+        isAdmin={user?.role === 'ADMIN'}
+        isLoadingPermissions={isLoadingPermissions}
       />
 
       {/* Pagination */}

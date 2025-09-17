@@ -18,7 +18,8 @@ import {
   XCircle,
   Calendar,
   Loader2,
-  Users
+  Users,
+  Shield
 } from 'lucide-react';
 import { WAPermission } from '@/lib/types';
 
@@ -42,7 +43,11 @@ export function UserPermissionsModal({
   permissions,
   isLoading
 }: UserPermissionsModalProps) {
-  const formatDate = (dateString: string) => {
+  // Check if this is an admin user (permissions with null id)
+  const isAdminUser = permissions.length > 0 && permissions.every(p => p.id === null);
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('id-ID', {
       year: 'numeric',
       month: 'short',
@@ -95,6 +100,23 @@ export function UserPermissionsModal({
         </DialogHeader>
 
         <div className="overflow-y-auto max-h-96 -mx-6 px-6">
+          {/* Admin Notice */}
+          {isAdminUser && (
+            <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Shield className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-purple-900 mb-1">Akses Administrator</h3>
+                  <p className="text-sm text-purple-700">
+                    Sebagai ADMIN, pengguna ini memiliki akses otomatis ke semua nomor WhatsApp ({permissions.length} nomor).
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
@@ -106,7 +128,7 @@ export function UserPermissionsModal({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium text-gray-900">
-                  Ditemukan {permissions.length} izin WhatsApp
+                  {isAdminUser ? `Akses WhatsApp Administrator (${permissions.length})` : `Ditemukan ${permissions.length} izin WhatsApp`}
                 </h3>
                 <div className="text-sm text-gray-500">
                   Total: {permissions.length} nomor
@@ -114,8 +136,8 @@ export function UserPermissionsModal({
               </div>
 
               <div className="grid gap-4">
-                {permissions.map((permission) => (
-                  <Card key={permission.id} className="border border-gray-200 hover:border-gray-300 transition-colors">
+                {permissions.map((permission, index) => (
+                  <Card key={permission.id || `admin-${index}`} className="border border-gray-200 hover:border-gray-300 transition-colors">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
@@ -147,18 +169,41 @@ export function UserPermissionsModal({
                               Nonaktif
                             </div>
                           )}
+
+                          {/* Admin badge for null permissions */}
+                          {permission.id === null && (
+                            <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
+                              <Shield className="h-3 w-3" />
+                              Admin
+                            </div>
+                          )}
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 text-xs text-gray-500 border-t border-gray-100 pt-3">
-                        <div className="flex items-center gap-2">
-                          <Hash className="h-3 w-3" />
-                          <span>ID Izin: {permission.id}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-3 w-3" />
-                          <span>Dibuat: {formatDate(permission.createdAt)}</span>
-                        </div>
+                        {permission.id !== null ? (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <Hash className="h-3 w-3" />
+                              <span>ID Izin: {permission.id}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              <span>Dibuat: {formatDate(permission.createdAt)}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-3 w-3" />
+                              <span>Tipe: Akses Administrator</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              <span>Status: Otomatis</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
