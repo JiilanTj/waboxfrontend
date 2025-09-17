@@ -252,7 +252,7 @@ export function WhatsAppTable({
                           Buka Chat
                         </Button>
                       )}
-                      {whatsappNumber.isActive && (() => {
+                      {isAdmin && whatsappNumber.isActive && (() => {
                         const session = getSessionForWhatsApp(whatsappNumber.id);
                         const isConnected = isWhatsAppConnected(whatsappNumber.id);
                         if (isConnected && session) {
@@ -440,7 +440,7 @@ export function WhatsAppTable({
                   ) : (
                     <>
                       {/* Connect/Disconnect Button - Only show if WhatsApp number is active */}
-                      {whatsappNumber.isActive && (() => {
+                      {isAdmin && whatsappNumber.isActive && (() => {
                         const session = getSessionForWhatsApp(whatsappNumber.id);
                         const isConnected = isWhatsAppConnected(whatsappNumber.id);
                         
