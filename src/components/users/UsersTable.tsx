@@ -18,8 +18,10 @@ interface UsersTableProps {
   limit: number;
   onEditUser: (user: User) => void;
   onDeleteUser: (user: User) => void;
+  onManagePermissions?: (user: User) => void;
   isUpdating: (id: number) => boolean;
   isDeleting: (id: number) => boolean;
+  isLoadingPermissions?: boolean;
 }
 
 export function UsersTable({ 
@@ -28,8 +30,10 @@ export function UsersTable({
   limit, 
   onEditUser, 
   onDeleteUser,
+  onManagePermissions,
   isUpdating,
-  isDeleting
+  isDeleting,
+  isLoadingPermissions = false
 }: UsersTableProps) {
   return (
     <Card className="shadow-sm">
@@ -142,6 +146,22 @@ export function UsersTable({
                             <Trash2 className="h-3 w-3" />
                           }
                         </Button>
+                        {onManagePermissions && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onManagePermissions(user)}
+                            disabled={isLoadingPermissions}
+                            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 hover:border-blue-200"
+                          >
+                            {isLoadingPermissions ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Shield className="h-3 w-3" />
+                            )}
+                            Kelola Izin
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

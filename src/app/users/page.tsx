@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import AuthGuard from '@/components/AuthGuard';
-import { useUsers } from '@/hooks';
+import { useUsers, useWAPermission, useWhatsApp } from '@/hooks';
 import { User, CreateUserRequest, UpdateUserRequest } from '@/lib/types';
 import {
   UsersHeader,
@@ -11,7 +11,8 @@ import {
   UsersTable,
   UsersPaginationComponent,
   CreateUserModal,
-  EditUserModal
+  EditUserModal,
+  ManagePermissionsModal
 } from '@/components/users';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
@@ -42,9 +43,27 @@ function UsersContent() {
     page
   } = useUsers({ autoFetch: true });
 
+  const {
+    userPermissions,
+    fetchPermissionsByUserId,
+    createPermission,
+    isLoading: isLoadingPermissions,
+    isCreating: isCreatingPermission
+  } = useWAPermission({ autoFetch: false });
+
+  const {
+    data: whatsappNumbers,
+    fetchWhatsApp
+  } = useWhatsApp({ autoFetch: false });
+
   const [searchInput, setSearchInput] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [managingPermissionsUser, setManagingPermissionsUser] = useState<User | null>(null);
+  const [managePermissionsConfirm, setManagePermissionsConfirm] = useState<{
+    open: boolean;
+    user: User | null;
+  }>({ open: false, user: null });
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean;
     user: User | null;
@@ -104,6 +123,30 @@ function UsersContent() {
     setEditingUser(user);
   };
 
+  const handleManagePermissions = (user: User) => {
+    setManagePermissionsConfirm({ open: true, user });
+  };
+
+  const handleConfirmManagePermissions = async (user: User) => {
+    setManagePermissionsConfirm({ open: false, user: null });
+    setManagingPermissionsUser(user);
+    await Promise.all([
+      fetchPermissionsByUserId(user.id),
+      fetchWhatsApp()
+    ]);
+  };
+
+  const handleCreatePermission = async (userId: number, whatsappNumberId: number) => {
+    const result = await createPermission({ userId, whatsappNumberId });
+    if (result) {
+      toast.success('Izin WhatsApp berhasil ditambahkan!');
+      // Refresh permissions after creation
+      await fetchPermissionsByUserId(userId);
+    } else {
+      toast.error('Gagal menambahkan izin WhatsApp');
+    }
+  };
+
   const handleRoleFilter = useCallback((roleValue: string) => {
     setFilters({ role: roleValue || undefined, page: 1 });
   }, [setFilters]);
@@ -149,8 +192,10 @@ function UsersContent() {
         limit={limit}
         onEditUser={handleEditUser}
         onDeleteUser={handleDeleteClick}
+        onManagePermissions={handleManagePermissions}
         isUpdating={isUpdating}
         isDeleting={isDeleting}
+        isLoadingPermissions={isLoadingPermissions}
       />
 
       {/* Pagination */}
@@ -198,6 +243,39 @@ function UsersContent() {
           }
         }}
         isLoading={deleteConfirm.user ? isDeleting(deleteConfirm.user.id) : false}
+      />
+
+      {/* Manage Permissions Confirmation Dialog */}
+      <ConfirmDialog
+        open={managePermissionsConfirm.open}
+        onOpenChange={(open) => setManagePermissionsConfirm({ open, user: null })}
+        title="Kelola Izin WhatsApp"
+        description={
+          managePermissionsConfirm.user 
+            ? `Apakah Anda ingin mengelola izin WhatsApp untuk pengguna "${managePermissionsConfirm.user.name}"? Anda dapat menambah atau menghapus akses nomor WhatsApp untuk pengguna ini.`
+            : 'Apakah Anda ingin mengelola izin WhatsApp untuk pengguna ini?'
+        }
+        confirmText="Kelola Izin"
+        cancelText="Batal"
+        variant="default"
+        onConfirm={() => {
+          if (managePermissionsConfirm.user) {
+            return handleConfirmManagePermissions(managePermissionsConfirm.user);
+          }
+        }}
+        isLoading={managePermissionsConfirm.user ? isLoadingPermissions : false}
+      />
+
+      {/* Manage Permissions Modal */}
+      <ManagePermissionsModal
+        open={!!managingPermissionsUser}
+        onClose={() => setManagingPermissionsUser(null)}
+        user={managingPermissionsUser}
+        permissions={userPermissions}
+        availableWhatsApps={whatsappNumbers}
+        isLoading={isLoadingPermissions}
+        isCreating={isCreatingPermission}
+        onCreatePermission={handleCreatePermission}
       />
     </div>
   );

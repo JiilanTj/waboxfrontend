@@ -4,3 +4,4 @@ export { UsersTable } from './UsersTable';
 export { UsersPaginationComponent } from './UsersPagination';
 export { CreateUserModal } from './CreateUserModal';
 export { EditUserModal } from './EditUserModal';
+export { ManagePermissionsModal } from './ManagePermissionsModal';
