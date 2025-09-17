@@ -80,11 +80,11 @@ export const waPermissionApi = {
   },
 
   /**
-   * GET /wapermission/my - get current user's WhatsApp permissions
+   * GET /wapermission/me - get current user's WhatsApp permissions
    */
   async getMyPermissions(): Promise<ApiResponse<MyWAPermissionListResponse>> {
     try {
-      const response = await apiClient.get<MyWAPermissionListResponse>('/wapermission/my');
+      const response = await apiClient.get<MyWAPermissionListResponse>('/wapermission/me');
       
       if (response.success && response.data) {
         return response;
