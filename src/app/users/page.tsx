@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import AuthGuard from '@/components/AuthGuard';
 import { useUsers, useWAPermission, useWhatsApp } from '@/hooks';
+import { useAuthContext } from '@/hooks/AuthContext';
+import Forbidden from '@/components/ui/forbidden';
 import { User, CreateUserRequest, UpdateUserRequest } from '@/lib/types';
 import {
   UsersHeader,
@@ -25,6 +27,25 @@ export default function UsersPage() {
 }
 
 function UsersContent() {
+  const { user, isLoading } = useAuthContext();
+
+  // While auth is loading, keep layout clean
+  if (isLoading) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
+  if (user?.role !== 'ADMIN') {
+    return <Forbidden title="403 Forbidden" description="Anda tidak memiliki akses ke halaman ini" />;
+  }
+
+  return <AdminUsersContent />;
+}
+
+function AdminUsersContent() {
   const { 
     data: users, 
     pagination, 

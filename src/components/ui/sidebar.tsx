@@ -77,6 +77,11 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
     }
   };
 
+  // Only show Users menu for ADMIN
+  const visibleItems = (user?.role === 'ADMIN')
+    ? sidebarItems
+    : sidebarItems.filter(item => item.href !== '/users');
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -178,7 +183,7 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
         {/* Navigation Menu */}
         <nav className="flex-1 p-4">
           <ul className="space-y-1">
-            {sidebarItems.map((item, index) => {
+            {visibleItems.map((item, index) => {
               const isActive = pathname === item.href;
               return (
                 <li key={index}>
