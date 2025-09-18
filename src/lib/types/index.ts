@@ -5,3 +5,4 @@ export * from './whatsapp-session';
 export * from './chat';
 export * from './message';
 export * from './wa-permission';
+export * from './chat-template';

@@ -11,7 +11,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  MessageSquareText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -22,6 +23,7 @@ interface SidebarItem {
   icon: React.ComponentType<{ className?: string }>;
   href: string;
   isLogout?: boolean;
+  adminOnly?: boolean;
 }
 
 const sidebarItems: SidebarItem[] = [
@@ -34,11 +36,18 @@ const sidebarItems: SidebarItem[] = [
     title: 'Manajemen Pengguna',
     icon: Users,
     href: '/users',
+    adminOnly: true,
   },
   {
     title: 'Akun WhatsApp',
     icon: MessageSquare,
     href: '/whatsapp',
+  },
+  {
+    title: 'Template Chat',
+    icon: MessageSquareText,
+    href: '/chat-templates',
+    adminOnly: true,
   },
   {
     title: 'Settings',
@@ -77,10 +86,12 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
     }
   };
 
-  // Only show Users menu for ADMIN
-  const visibleItems = (user?.role === 'ADMIN')
-    ? sidebarItems
-    : sidebarItems.filter(item => item.href !== '/users');
+  // Filter visibility based on role
+  const visibleItems = sidebarItems.filter(item => {
+    if (item.adminOnly && user?.role !== 'ADMIN') return false;
+    if (item.title === 'Manajemen Pengguna' && user?.role !== 'ADMIN') return false;
+    return true;
+  });
 
   return (
     <>
