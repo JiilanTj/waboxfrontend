@@ -4,6 +4,7 @@ import { Check, CheckCheck, AlertCircle } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useMessage } from '@/hooks/useMessage';
 import { ChatMessage } from '@/lib/types/message';
+import { renderWhatsAppFormatted } from '@/lib/utils/whatsapp-format';
 
 interface MessageListProps {
   contactId: string;
@@ -69,10 +70,7 @@ export function MessageList({ contactId, sessionId }: MessageListProps) {
     error, 
     refresh, 
     loadMore, 
-    pagination,
-    sendMessage, // 🆕 Get sendMessage function
-    isSending,   // 🆕 Get sending state
-    sendError    // 🆕 Get send error
+    pagination
   } = useMessage({
     chatId: contactId,
     sessionId: sessionId, // 🆕 Pass sessionId
@@ -89,9 +87,7 @@ export function MessageList({ contactId, sessionId }: MessageListProps) {
     sessionId, // 🆕 Log sessionId
     messagesLength: messages.length,
     isLoading,
-    error,
-    isSending,
-    sendError
+    error
   });
 
   const scrollToBottom = () => {
@@ -197,7 +193,7 @@ export function MessageList({ contactId, sessionId }: MessageListProps) {
                   {/* Message content */}
                   <div className="break-words">
                     {message.type === 'TEXT' ? (
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      <p className="text-sm whitespace-pre-wrap">{renderWhatsAppFormatted(message.content)}</p>
                     ) : (
                       <div className="text-sm">
                         {/* Handle media messages */}
@@ -241,10 +237,10 @@ export function MessageList({ contactId, sessionId }: MessageListProps) {
                           </div>
                         )}
                         {message.mediaCaption && (
-                          <p className="whitespace-pre-wrap">{message.mediaCaption}</p>
+                          <p className="whitespace-pre-wrap">{renderWhatsAppFormatted(message.mediaCaption)}</p>
                         )}
                         {!message.mediaCaption && message.content && (
-                          <p className="whitespace-pre-wrap">{message.content}</p>
+                          <p className="whitespace-pre-wrap">{renderWhatsAppFormatted(message.content)}</p>
                         )}
                       </div>
                     )}

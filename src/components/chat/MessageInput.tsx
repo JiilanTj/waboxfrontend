@@ -7,6 +7,7 @@ import { useMessage } from '@/hooks/useMessage';
 import { SendMessageResponse } from '@/lib/types/message';
 import { chatTemplateApi } from '@/lib/api';
 import { ChatTemplate } from '@/lib/types';
+import { normalizeWhatsAppNewlines, renderWhatsAppFormatted } from '@/lib/utils/whatsapp-format';
 
 interface MessageInputProps {
   contactId: string;
@@ -40,12 +41,13 @@ export function MessageInput({ contactId, sessionId, contactNumber }: MessageInp
 
   const handleSend = async () => {
     if (message.trim() && sessionId && contactNumber) {
-      console.log('📤 Sending message to', contactNumber, ':', message);
+      const finalMessage = normalizeWhatsAppNewlines(message);
+      console.log('📤 Sending message to', contactNumber, ':', finalMessage);
       console.log('📤 Session ID:', sessionId);
       console.log('📤 Contact number:', contactNumber);
       
       try {
-        const result = await sendMessage(contactNumber, message);
+        const result = await sendMessage(contactNumber, finalMessage);
         
         console.log('📤 Send result type:', typeof result);
         console.log('📤 Send result:', result);
@@ -91,7 +93,7 @@ export function MessageInput({ contactId, sessionId, contactNumber }: MessageInp
     const firstSpaceIdx = trimmed.indexOf(' ');
     const remainder = firstSpaceIdx === -1 ? '' : trimmed.slice(firstSpaceIdx).trimStart();
     const newMessage = `${tpl.content}${remainder ? ` ${remainder}` : ''}`;
-    setMessage(newMessage);
+    setMessage(normalizeWhatsAppNewlines(newMessage));
     setShowSuggestions(false);
     setTemplateError(null);
   };
@@ -113,7 +115,7 @@ export function MessageInput({ contactId, sessionId, contactNumber }: MessageInp
         const content = res.data.data.content;
         const remainder = firstSpaceIdx === -1 ? '' : trimmed.slice(firstSpaceIdx).trimStart();
         const newMessage = `${content}${remainder ? ` ${remainder}` : ''}`;
-        setMessage(newMessage);
+        setMessage(normalizeWhatsAppNewlines(newMessage));
         return true;
       } else {
         setTemplateError(res.error?.message || 'Template tidak ditemukan');
@@ -269,36 +271,56 @@ export function MessageInput({ contactId, sessionId, contactNumber }: MessageInp
         <div className="flex-1 relative">
           <div className="flex items-end bg-white rounded-lg border border-gray-200 focus-within:border-green-500">
             <div className="flex-1">
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onKeyPress={handleKeyPress}
-                placeholder={
-                  !sessionId ? "WhatsApp belum terhubung — Anda tetap bisa menulis pesan dan memasukkan template" :
-                  !contactNumber ? "Contact number diperlukan untuk mengirim pesan — Anda tetap bisa menulis" :
-                  "Ketik pesan atau /command (Tab untuk memasukkan template)"
-                }
-                disabled={isSending} // Keep editable even without session/contact; only disable when sending
-                className="w-full px-3 py-2 resize-none border-none outline-none rounded-lg max-h-20 min-h-[40px] disabled:bg-gray-100 disabled:text-gray-400"
-                rows={1}
-                style={{
-                  height: 'auto',
-                  minHeight: '40px',
-                  maxHeight: '80px'
-                }}
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  target.style.height = 'auto';
-                  target.style.height = target.scrollHeight + 'px';
-                }}
-              />
+              <div className="relative">
+                {/* Formatted overlay (behind textarea) */}
+                {message && (
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 px-3 py-2 text-sm whitespace-pre-wrap text-gray-900 pointer-events-none"
+                    style={{ fontSynthesis: 'none' }}
+                  >
+                    <div className="leading-5 tracking-normal">{renderWhatsAppFormatted(message, { preview: true })}</div>
+                  </div>
+                )}
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(normalizeWhatsAppNewlines(e.target.value))}
+                  onKeyDown={handleKeyDown}
+                  onKeyPress={handleKeyPress}
+                  placeholder={
+                    !sessionId ? "WhatsApp belum terhubung — Anda tetap bisa menulis pesan dan memasukkan template" :
+                    !contactNumber ? "Contact number diperlukan untuk mengirim pesan — Anda tetap bisa menulis" :
+                    "Ketik pesan atau /command (Tab untuk memasukkan template)"
+                  }
+                  disabled={isSending}
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  autoComplete="off"
+                  className="w-full px-3 py-2 text-sm leading-5 font-normal tracking-normal resize-none border-none outline-none rounded-lg max-h-20 min-h-[40px] disabled:bg-gray-100 disabled:text-gray-400 bg-transparent relative z-10"
+                  rows={1}
+                  style={{
+                    height: 'auto',
+                    minHeight: '40px',
+                    maxHeight: '80px',
+                    color: message ? 'transparent' : undefined,
+                    caretColor: '#111827',
+                    fontSynthesis: 'none'
+                  }}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = 'auto';
+                    target.style.height = target.scrollHeight + 'px';
+                  }}
+                />
+              </div>
               {/* 🆕 Command hint */}
               {isTypingCommand && (
-                <div className="px-3 pb-2 text-xs text-gray-500">
+                <div className="px-3 pb-1 text-xs text-gray-500">
                   {isResolvingTemplate ? 'Memuat template…' : 'Ketik command, tekan Tab/Enter untuk memilih template'}
                 </div>
               )}
+              {/* Removed separate preview; formatting is now inline */}
             </div>
             <Button 
               variant="ghost" 
