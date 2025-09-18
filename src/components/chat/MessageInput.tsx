@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send, Paperclip, Smile, Mic, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMessage } from '@/hooks/useMessage';
 import { SendMessageResponse } from '@/lib/types/message';
+import { chatTemplateApi } from '@/lib/api';
+import { ChatTemplate } from '@/lib/types';
 
 interface MessageInputProps {
   contactId: string;
@@ -14,6 +16,15 @@ interface MessageInputProps {
 
 export function MessageInput({ contactId, sessionId, contactNumber }: MessageInputProps) {
   const [message, setMessage] = useState('');
+  const [isResolvingTemplate, setIsResolvingTemplate] = useState(false);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+
+  // 🆕 Suggestions state for /command
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<ChatTemplate[]>([]);
+  const [suggestIndex, setSuggestIndex] = useState(0);
+  const [isSuggestLoading, setIsSuggestLoading] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
 
   // 🆕 Use the message hook to get sendMessage function and contact data
   const { 
@@ -75,12 +86,148 @@ export function MessageInput({ contactId, sessionId, contactNumber }: MessageInp
     }
   };
 
+  const acceptTemplate = (tpl: ChatTemplate) => {
+    const trimmed = message.trimStart();
+    const firstSpaceIdx = trimmed.indexOf(' ');
+    const remainder = firstSpaceIdx === -1 ? '' : trimmed.slice(firstSpaceIdx).trimStart();
+    const newMessage = `${tpl.content}${remainder ? ` ${remainder}` : ''}`;
+    setMessage(newMessage);
+    setShowSuggestions(false);
+    setTemplateError(null);
+  };
+
+  const tryInsertTemplateByCommand = async () => {
+    const trimmed = message.trimStart();
+    if (!trimmed.startsWith('/')) return false;
+
+    // Extract first token (command)
+    const firstSpaceIdx = trimmed.indexOf(' ');
+    const commandToken = (firstSpaceIdx === -1 ? trimmed : trimmed.slice(0, firstSpaceIdx)).trim();
+    if (commandToken.length < 2) return false; // at least '/a'
+
+    setTemplateError(null);
+    setIsResolvingTemplate(true);
+    try {
+      const res = await chatTemplateApi.getByCommand(commandToken);
+      if (res.success && res.data) {
+        const content = res.data.data.content;
+        const remainder = firstSpaceIdx === -1 ? '' : trimmed.slice(firstSpaceIdx).trimStart();
+        const newMessage = `${content}${remainder ? ` ${remainder}` : ''}`;
+        setMessage(newMessage);
+        return true;
+      } else {
+        setTemplateError(res.error?.message || 'Template tidak ditemukan');
+        return false;
+      }
+    } catch (e) {
+      setTemplateError(e instanceof Error ? e.message : 'Gagal mengambil template');
+      return false;
+    } finally {
+      setIsResolvingTemplate(false);
+    }
+  };
+
+  // 🆕 Detect /command typing and fetch suggestions
+  useEffect(() => {
+    const trimmed = message.trimStart();
+    if (!trimmed.startsWith('/')) {
+      setShowSuggestions(false);
+      setCommandQuery('');
+      setSuggestions([]);
+      return;
+    }
+
+    const firstSpaceIdx = trimmed.indexOf(' ');
+    const query = (firstSpaceIdx === -1 ? trimmed.slice(1) : trimmed.slice(1, firstSpaceIdx)).toLowerCase();
+    setCommandQuery(query);
+
+    let cancelled = false;
+    setIsSuggestLoading(true);
+
+    const fetchSuggestions = async () => {
+      try {
+        // Use list endpoint with search, then filter by command prefix to be safe
+        const res = await chatTemplateApi.list({ page: 1, limit: 10, search: query, isActive: true });
+        if (!res.success || !res.data) throw new Error(res.error?.message || 'Gagal memuat template');
+        const items = res.data.data || [];
+        const filtered = items.filter(t => (t.commands || '').toLowerCase().startsWith(`/${query}`));
+        if (!cancelled) {
+          setSuggestions(filtered);
+          setSuggestIndex(0);
+          setShowSuggestions(true);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn('Gagal memuat suggestion template', err);
+          setSuggestions([]);
+          setShowSuggestions(true); // still show panel with "no results"
+        }
+      } finally {
+        if (!cancelled) setIsSuggestLoading(false);
+      }
+    };
+
+    const handle = setTimeout(fetchSuggestions, 200); // debounce
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [message]);
+
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Navigation within suggestions
+    if (showSuggestions) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSuggestIndex((i) => (suggestions.length ? (i + 1) % suggestions.length : 0));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSuggestIndex((i) => (suggestions.length ? (i - 1 + suggestions.length) % suggestions.length : 0));
+        return;
+      }
+      if (e.key === 'Enter') {
+        if (suggestions[suggestIndex]) {
+          e.preventDefault();
+          acceptTemplate(suggestions[suggestIndex]);
+          return;
+        }
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowSuggestions(false);
+        return;
+      }
+    }
+
+    // Insert template on Tab when typing a command
+    if (e.key === 'Tab') {
+      if (showSuggestions && suggestions[suggestIndex]) {
+        e.preventDefault();
+        acceptTemplate(suggestions[suggestIndex]);
+        return;
+      }
+      const didInsert = await tryInsertTemplateByCommand();
+      if (didInsert) {
+        e.preventDefault();
+      }
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
+      if (showSuggestions) {
+        // When suggestions visible, Enter is handled in onKeyDown to accept; block sending
+        e.preventDefault();
+        return;
+      }
       e.preventDefault();
       handleSend();
     }
   };
+
+  const isTypingCommand = message.trimStart().startsWith('/');
 
   return (
     <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">
@@ -89,6 +236,13 @@ export function MessageInput({ contactId, sessionId, contactNumber }: MessageInp
         <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-red-600 text-sm flex items-center gap-2">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>Gagal mengirim pesan: {sendError}</span>
+        </div>
+      )}
+
+      {/* 🆕 Template fetch error */}
+      {templateError && (
+        <div className="mb-2 p-2 bg-amber-50 border border-amber-200 rounded text-amber-700 text-sm">
+          {templateError}
         </div>
       )}
 
@@ -118,13 +272,14 @@ export function MessageInput({ contactId, sessionId, contactNumber }: MessageInp
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
                 onKeyPress={handleKeyPress}
                 placeholder={
-                  !sessionId ? "WhatsApp belum terhubung" :
-                  !contactNumber ? "Contact number diperlukan untuk mengirim pesan" :
-                  "Ketik pesan"
-                } // 🆕 Updated placeholder
-                disabled={isSending || !sessionId || !contactNumber} // 🆕 Disable when sending or missing requirements
+                  !sessionId ? "WhatsApp belum terhubung — Anda tetap bisa menulis pesan dan memasukkan template" :
+                  !contactNumber ? "Contact number diperlukan untuk mengirim pesan — Anda tetap bisa menulis" :
+                  "Ketik pesan atau /command (Tab untuk memasukkan template)"
+                }
+                disabled={isSending} // Keep editable even without session/contact; only disable when sending
                 className="w-full px-3 py-2 resize-none border-none outline-none rounded-lg max-h-20 min-h-[40px] disabled:bg-gray-100 disabled:text-gray-400"
                 rows={1}
                 style={{
@@ -138,6 +293,12 @@ export function MessageInput({ contactId, sessionId, contactNumber }: MessageInp
                   target.style.height = target.scrollHeight + 'px';
                 }}
               />
+              {/* 🆕 Command hint */}
+              {isTypingCommand && (
+                <div className="px-3 pb-2 text-xs text-gray-500">
+                  {isResolvingTemplate ? 'Memuat template…' : 'Ketik command, tekan Tab/Enter untuk memilih template'}
+                </div>
+              )}
             </div>
             <Button 
               variant="ghost" 
@@ -148,13 +309,44 @@ export function MessageInput({ contactId, sessionId, contactNumber }: MessageInp
               <Smile className="w-5 h-5 text-gray-600" />
             </Button>
           </div>
+
+          {/* 🆕 Suggestions dropdown */}
+          {showSuggestions && (
+            <div className="absolute left-0 right-0 bottom-full mb-2 z-20">
+              <div className="bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden max-h-64 overflow-y-auto">
+                {isSuggestLoading && (
+                  <div className="px-3 py-2 text-xs text-gray-500">Memuat…</div>
+                )}
+                {!isSuggestLoading && suggestions.length === 0 && (
+                  <div className="px-3 py-2 text-sm text-gray-500">Tidak ada command cocok{commandQuery ? ` untuk \"${commandQuery}\"` : ''}</div>
+                )}
+                {!isSuggestLoading && suggestions.map((t, idx) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); acceptTemplate(t); }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-green-50 ${idx === suggestIndex ? 'bg-green-50' : ''}`}
+                    title={t.name}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-mono text-green-700 whitespace-nowrap">{t.commands}</span>
+                      <span className="text-gray-600 truncate">{t.name}</span>
+                    </div>
+                  </button>
+                ))}
+                <div className="px-3 py-2 border-t text-[11px] text-gray-500 bg-gray-50">
+                  Enter/Tab: pilih • ↑/↓: navigasi • Esc: tutup
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Send Button or Mic */}
         {message.trim() ? (
           <Button 
             onClick={handleSend}
-            disabled={isSending || !sessionId || !contactNumber} // 🆕 Disable when sending or no sessionId
+            disabled={isSending || !sessionId || !contactNumber}
             className="bg-green-600 hover:bg-green-700 text-white rounded-full w-10 h-10 p-0 flex-shrink-0 disabled:opacity-50"
             title={!sessionId ? "WhatsApp belum terhubung" : !contactNumber ? "Contact number diperlukan" : "Kirim pesan"}
           >
